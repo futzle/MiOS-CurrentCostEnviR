@@ -1,1 +1,115 @@
-<?xml version="1.0" encoding="UTF-8"?><implementation>	<settings>		<protocol>crlf</protocol>	  <handleChildren>1</handleChildren>	</settings>	<functions>-- Power used/consumed by each appliance (0 is the "whole house" appliance).APPLIANCE_POWER = {	["0"] = 0,	["1"] = 0,	["2"] = 0,	["3"] = 0,	["4"] = 0,	["5"] = 0,	["6"] = 0,	["7"] = 0,	["8"] = 0,	["9"] = 0}SERVICE_ID = "urn:futzle-com:serviceId:CurrentCostEnviR1"ENERGY_SERVICE_ID = "urn:micasaverde-com:serviceId:EnergyMetering1"TEMPERATURE_SERVICE_ID = "urn:upnp-org:serviceId:TemperatureSensor1"DEBUG = falsefunction initialize(lul_device)	luup.log("Initializing CurrentCost EnviR")  -- Compute total power use using this formula.	-- Formula string contains sequences of +n or -n,	-- adding or subtracting the appliance to compute a total.	-- Default formula (0, equivalently +0) ignores appliances 1-9	-- and counts only the whole-house reading.	FORMULA = luup.variable_get(SERVICE_ID, "Formula", lul_device)	if (FORMULA == nil) then		luup.variable_set(SERVICE_ID, "Formula", "0", lul_device)		FORMULA = "+0"	else		if (FORMULA:find("^%-") == nil) then			FORMULA = "+" .. FORMULA		end	end	luup.log("Power formula: " .. FORMULA)endfunction calculateFormula()	local total = 0	local formula = FORMULA	for sign, appliance in formula:gfind("([+-])%s-(%d)") do		if (sign == "+") then			total = total + APPLIANCE_POWER[appliance]		elseif (sign == "-") then			total = total - APPLIANCE_POWER[appliance]		end	end	return totalend-- Called when a line of data comes in from the EnviR.function incoming(lul_device, lul_data)	if (DEBUG) then luup.log("CurrentCost incoming:" .. lul_data) end	local matched, source, dsb, time, tmpr, sensor, id, watts	-- Live-feed data.	-- To do: three-phase data.	matched, _, source, dsb, time, tmpr, sensor, id, watts = 		lul_data:find("^&lt;msg>&lt;src>(.-)&lt;/src>&lt;dsb>(%d-)&lt;/dsb>&lt;time>(%d%d:%d%d:%d%d)&lt;/time>&lt;tmpr>(.-)&lt;/tmpr>&lt;sensor>(%d)&lt;/sensor>&lt;id>(.-)&lt;/id>&lt;type>1&lt;/type>&lt;ch1>&lt;watts>(%d-)&lt;/watts>&lt;/ch1>&lt;/msg>$")	if (matched ~= nil) then		watts = tostring(tonumber(watts))		if (DEBUG) then luup.log("Sensor " .. sensor .. ": " .. watts .. " W") end		APPLIANCE_POWER[sensor] = watts		luup.variable_set(ENERGY_SERVICE_ID, "Watts", calculateFormula(), lul_device)		luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", tmpr, lul_device)	endend	</functions>	<startup>initialize</startup>	<incoming><lua>incoming(lul_device,lul_data)</lua></incoming></implementation>
+<?xml version="1.0" encoding="UTF-8"?>
+<implementation>
+	<settings>
+		<protocol>crlf</protocol>
+		<handleChildren>1</handleChildren>
+	</settings>
+	<functions>
+
+-- Power used/consumed by each appliance (0 is the "whole house" appliance).
+APPLIANCE_POWER = { }
+SERVICE_ID = "urn:futzle-com:serviceId:CurrentCostEnviR1"
+ENERGY_SERVICE_ID = "urn:micasaverde-com:serviceId:EnergyMetering1"
+TEMPERATURE_SERVICE_ID = "urn:upnp-org:serviceId:TemperatureSensor1"
+DEBUG = false
+
+
+function initialize(lul_device)
+	luup.log("Initializing CurrentCost EnviR")
+	-- Help prevent race condition
+	luup.io.intercept()
+
+	-- Create child devices for the attached appliances.
+	local childDevices = luup.chdev.start(lul_device)
+	for child = 0, 9 do
+		if (luup.variable_get(SERVICE_ID, "Appliance" .. tostring(child), lul_device) or "0" ~= "0") then
+			luup.chdev.append(lul_device, childDevices, "Appliance" .. tostring(child),
+				"Appliance " .. child, "urn:schemas-futzle-com:device:CurrentCostEnvirAppliance:1",
+				"D_CurrentCostEnviRAppliance1.xml", "", "", false)
+		end
+	end
+	luup.chdev.sync(lul_device, childDevices)
+
+	-- Compute total power use for the parent device using this formula.
+	-- Formula string contains sequences of +n or -n,
+	-- adding or subtracting the appliance to compute a total.
+	-- Default formula (0, equivalently +0) ignores appliances 1-9
+	-- and counts only the whole-house reading.
+	FORMULA = luup.variable_get(SERVICE_ID, "Formula", lul_device)
+	if (FORMULA == nil) then
+		luup.variable_set(SERVICE_ID, "Formula", "0", lul_device)
+		FORMULA = "+0"
+	else
+		if (FORMULA:find("^%-") == nil) then
+			FORMULA = "+" .. FORMULA
+		end
+	end
+	luup.log("Power formula: " .. FORMULA)
+
+	-- Automatically detect appliances and create child devices
+	-- the next time that the Luup engine is reloaded.
+	AUTO_DETECT = luup.variable_get(SERVICE_ID, "ApplianceAutoDetect", lul_device)
+	if (AUTO_DETECT == nil) then
+		luup.variable_set(SERVICE_ID, "ApplianceAutoDetect", "1", lul_device)
+	end
+end
+
+function calculateFormula()
+	local total = 0
+	local formula = FORMULA
+	for sign, appliance in formula:gfind("([+-])%s-(%d)") do
+		if (sign == "+") then
+			total = total + (APPLIANCE_POWER[appliance] or 0)
+		elseif (sign == "-") then
+			total = total - (APPLIANCE_POWER[appliance] or 0)
+		end
+	end
+	return total
+end
+
+-- Called when a line of data comes in from the EnviR.
+function incoming(lul_device, lul_data)
+	if (DEBUG) then luup.log("CurrentCost incoming:" .. lul_data) end
+
+	local matched, source, dsb, time, tmpr, sensor, id, watts
+
+	-- Live-feed data.
+	-- To do: three-phase data.
+	matched, _, source, dsb, time, tmpr, sensor, id, watts = 
+		lul_data:find("^&lt;msg>&lt;src>(.-)&lt;/src>&lt;dsb>(%d-)&lt;/dsb>&lt;time>(%d%d:%d%d:%d%d)&lt;/time>&lt;tmpr>(.-)&lt;/tmpr>&lt;sensor>(%d)&lt;/sensor>&lt;id>(.-)&lt;/id>&lt;type>1&lt;/type>&lt;ch1>&lt;watts>(%d-)&lt;/watts>&lt;/ch1>&lt;/msg>$")
+	if (matched ~= nil) then
+		watts = tostring(tonumber(watts))
+		if (DEBUG) then luup.log("Sensor " .. sensor .. ": " .. watts .. " W") end
+
+		-- Log the child device's power (if there is a child device).
+		for k, v in pairs(luup.devices) do
+			if (v.device_num_parent == lul_device and v.id == "Appliance" .. sensor) then
+				luup.variable_set(ENERGY_SERVICE_ID, "Watts", watts, k)
+			end
+		end
+
+		-- Note this appliance number, if permitted.
+		if (AUTO_DETECT or "0" ~= "0") then
+			luup.variable_set(SERVICE_ID, "Appliance" .. sensor, id, lul_device)
+		end
+
+		-- Compute parent device's reading.
+		APPLIANCE_POWER[sensor] = watts
+		luup.variable_set(ENERGY_SERVICE_ID, "Watts", calculateFormula(), lul_device)
+
+		-- Store the EnviR's firmware version.
+		luup.variable_set(SERVICE_ID, "Version", source, lul_device)
+
+		-- Store the EnviR's concept of the date.
+		luup.variable_set(SERVICE_ID, "DaysSinceBirth", tonumber(dsb), lul_device)
+		luup.variable_set(SERVICE_ID, "Time", time, lul_device)
+
+		-- Log temperature.  We get it for free.
+		luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", tmpr, lul_device)
+	end
+end
+
+	</functions>
+	<startup>initialize</startup>
+	<incoming><lua>incoming(lul_device,lul_data)</lua></incoming>
+</implementation>

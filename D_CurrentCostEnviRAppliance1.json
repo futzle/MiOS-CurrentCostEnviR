@@ -1,0 +1,143 @@
+{
+	"flashicon": "icons\/Power_Meter.swf",
+	"imgIconBody": "",
+	"imgIconDimmable": "",
+	"imgIconTurnable": "",
+	"imgIconMin": "",
+	"imgIconMax": "",
+	"halloIconsDir": "pics\/hallo",
+	"DisplayStatus": {
+	},
+	"doc_url": {
+		"doc_language": 1,
+		"doc_manual": 1,
+		"doc_version": 1,
+		"doc_platform": 0,
+		"doc_page": "devices"
+	},
+	"Tabs": [
+		{
+			"Label": {
+				"lang_tag": "tabname_control",
+				"text": "Control"
+			},
+			"Position": "0",
+			"TabType": "flash",
+			"ControlGroup": [
+				{
+					"id": "1",
+					"type": "info"
+				}
+			],
+			"Control": [
+				{
+					"ControlGroup": "1",
+					"ControlPair": "1",
+					"ControlHeader": "1",
+					"ControlType": "label",
+					"Label": {
+						"lang_tag": "power",
+						"text": "Power:"
+					},
+					"Display": {
+						"Top": 60,
+						"Left": 50,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlGroup": "1",
+					"ControlPair": "1",
+					"ControlHeader": "1",
+					"ControlType": "variable",
+					"Display": {
+						"Service": "urn:micasaverde-com:serviceId:EnergyMetering1",
+						"Variable": "Watts",
+						"Top": 60,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlGroup":"1",
+					"ControlPair":"1",
+					"ControlHeader":"1",
+					"ControlType": "label",
+					"Label": {
+						"lang_tag": "watts",
+						"text": "W"
+					},
+					"Display": {
+						"Top": 60,
+						"Left": 170,
+						"Width": 75,
+						"Height": 20
+					}
+				}
+			]
+		},
+		{
+			"Label": {
+				"lang_tag": "advanced",
+				"text": "Advanced"
+			},
+			"Position": "1",
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "advanced_device"
+		}, 
+		{
+			"Label": {
+				"lang_tag": "logs",
+				"text": "Logs"
+			},
+			"Position": "2",
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "device_logs"
+		},
+		{
+			"Label": {
+				"lang_tag": "notifications",
+				"text": "Notifications"
+			},
+			"Position": "3",
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "device_notifications"
+		}
+	],
+	"eventList": {
+		"event_1": {
+			"label": "Energy usage goes above",
+			"serviceId": "urn:micasaverde-com:serviceId:EnergyMetering1",
+			"norepeat": "1",
+			"argumentList" : {
+				"argument_1" : {
+					"dataType": "i4",
+					"name": "Watts",
+					"comparisson": ">",
+					"prefix": "Watts: ",
+					"suffix": ""
+				}
+			}
+		},
+		"event_2": {
+			"label": "Energy usage goes below",
+			"serviceId": "urn:micasaverde-com:serviceId:EnergyMetering1",
+			"norepeat": "1",
+			"argumentList" : {
+				"argument_1" : {
+					"dataType": "i4",
+					"name": "Watts",
+					"comparisson": "<",
+					"prefix": "Watts: ",
+					"suffix": ""
+				}
+			}
+		}
+	},
+	"DeviceType": "urn:schemas-futzle-com:device:CurrentCostEnviRAppliance:1"
+}

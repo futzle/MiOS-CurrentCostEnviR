@@ -83,8 +83,8 @@
 
 				{
 					"ControlGroup": "2",
-					"ControlPair": "1",
-					"ControlHeader": "0",
+					"ControlPair": "2",
+					"ControlHeader": "2",
 					"ControlType": "label",
 					"Label": {
 						"lang_tag": "temperature",
@@ -99,13 +99,103 @@
 				},
 				{
 					"ControlGroup": "2",
-					"ControlPair": "1",
-					"ControlHeader": "0",
+					"ControlPair": "2",
+					"ControlHeader": "2",
 					"ControlType": "variable",
 					"Display": {
 						"Service": "urn:upnp-org:serviceId:TemperatureSensor1",
 						"Variable": "CurrentTemperature",
 						"Top": 90,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlGroup": "2",
+					"ControlPair": "2",
+					"ControlHeader": "2",
+					"ControlType": "label",
+					"Label": {
+						"lang_tag": "dayssincebirth",
+						"text": "Days since birth:"
+					},
+					"Display": {
+						"Top": 120,
+						"Left": 50,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlGroup": "2",
+					"ControlPair": "2",
+					"ControlHeader": "2",
+					"ControlType": "variable",
+					"Display": {
+						"Service": "urn:futzle-com:serviceId:CurrentCostEnviR1",
+						"Variable": "DaysSinceBirth",
+						"Top": 120,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlGroup": "2",
+					"ControlPair": "2",
+					"ControlHeader": "2",
+					"ControlType": "label",
+					"Label": {
+						"lang_tag": "time",
+						"text": "Console time:"
+					},
+					"Display": {
+						"Top": 150,
+						"Left": 50,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlGroup": "2",
+					"ControlPair": "2",
+					"ControlHeader": "2",
+					"ControlType": "variable",
+					"Display": {
+						"Service": "urn:futzle-com:serviceId:CurrentCostEnviR1",
+						"Variable": "Time",
+						"Top": 150,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlGroup": "2",
+					"ControlPair": "2",
+					"ControlHeader": "2",
+					"ControlType": "label",
+					"Label": {
+						"lang_tag": "version",
+						"text": "Version:"
+					},
+					"Display": {
+						"Top": 180,
+						"Left": 50,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlGroup": "2",
+					"ControlPair": "2",
+					"ControlHeader": "2",
+					"ControlType": "variable",
+					"Display": {
+						"Service": "urn:futzle-com:serviceId:CurrentCostEnviR1",
+						"Variable": "Version",
+						"Top": 180,
 						"Left": 145,
 						"Width": 75,
 						"Height": 20
@@ -200,7 +290,7 @@
 					"suffix": " degrees"
 				}
 			}
-		},
+		}
 	},
-	"DeviceType": "urn:schemas-futzle-com:device:CurrentCostEnvir:1"
+	"DeviceType": "urn:schemas-futzle-com:device:CurrentCostEnviR:1"
 }
