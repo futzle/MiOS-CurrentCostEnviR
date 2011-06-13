@@ -11,9 +11,10 @@ APPLIANCE_POWER = { }
 SERVICE_ID = "urn:futzle-com:serviceId:CurrentCostEnviR1"
 ENERGY_SERVICE_ID = "urn:micasaverde-com:serviceId:EnergyMetering1"
 TEMPERATURE_SERVICE_ID = "urn:upnp-org:serviceId:TemperatureSensor1"
+CHILD_DEVICE = { }
 DEBUG = false
 
-
+-- Run once at Luup engine startup.
 function initialize(lul_device)
 	luup.log("Initializing CurrentCost EnviR")
 	-- Help prevent race condition
@@ -52,8 +53,19 @@ function initialize(lul_device)
 	if (AUTO_DETECT == nil) then
 		luup.variable_set(SERVICE_ID, "ApplianceAutoDetect", "1", lul_device)
 	end
+
+	-- Cache the child device ids.
+	for sensor = 1, 9 do
+		for k, v in pairs(luup.devices) do
+			if (v.device_num_parent == lul_device and v.id == "Appliance" .. sensor) then
+				if (DEBUG) then luup.log("Child deviceId for Appliance " .. sensor .. " is " .. k) end
+				CHILD_DEVICE[tostring(sensor)] = k
+			end
+		end
+	end
 end
 
+-- Compute parent device's display.
 function calculateFormula()
 	local total = 0
 	local formula = FORMULA
@@ -67,25 +79,46 @@ function calculateFormula()
 	return total
 end
 
--- Called when a line of data comes in from the EnviR.
-function incoming(lul_device, lul_data)
-	if (DEBUG) then luup.log("CurrentCost incoming:" .. lul_data) end
+-- Serialize an array to a string.
+-- Used to store two-hourly, daily and monthly history.
+function serializeHistory(t)
+	local result = ""
+	for k, v in pairs(t) do
+		result = k .. "=" .. v .. ";" .. result
+	end
+	return result
+end
 
-	local matched, source, dsb, time, tmpr, sensor, id, watts
+-- Deserialize a string into an array.
+-- Used to store two-hourly, daily and monthly history.
+function deserializeHistory(s)
+	local result = {}
+	for k, v in s:gfind("(.-)=(.-);") do
+		result[k] = v
+	end
+	return result
+end	
 
-	-- Live-feed data.
-	-- To do: three-phase data.
-	matched, _, source, dsb, time, tmpr, sensor, id, watts = 
-		lul_data:find("^&lt;msg>&lt;src>(.-)&lt;/src>&lt;dsb>(%d-)&lt;/dsb>&lt;time>(%d%d:%d%d:%d%d)&lt;/time>&lt;tmpr>(.-)&lt;/tmpr>&lt;sensor>(%d)&lt;/sensor>&lt;id>(.-)&lt;/id>&lt;type>1&lt;/type>&lt;ch1>&lt;watts>(%d-)&lt;/watts>&lt;/ch1>&lt;/msg>$")
+-- Live-feed data.
+function realtimePacket(lul_device, lul_data)
+	local matched, source, dsb, time, tmpr, sensor, id, dats
+
+	matched, _, source, dsb, time, tmpr, sensor, id, data = 
+		lul_data:find("^&lt;msg>&lt;src>(.-)&lt;/src>&lt;dsb>(%d-)&lt;/dsb>&lt;time>(%d%d:%d%d:%d%d)&lt;/time>&lt;tmpr>(.-)&lt;/tmpr>&lt;sensor>(%d)&lt;/sensor>&lt;id>(.-)&lt;/id>&lt;type>1&lt;/type>(.-)&lt;/msg>$")
 	if (matched ~= nil) then
-		watts = tostring(tonumber(watts))
+		-- Multiple channels (maybe) in the packet.
+		local threePhaseWatts = 0
+		for watts in data:gfind("&lt;ch%d>&lt;watts>(%d-)&lt;/watts>&lt;/ch%d>") do
+			-- Add together to get combined all-phase wattage.
+			threePhaseWatts = threePhaseWatts + tonumber(watts)
+		end
+		local watts = tostring(threePhaseWatts)
 		if (DEBUG) then luup.log("Sensor " .. sensor .. ": " .. watts .. " W") end
 
 		-- Log the child device's power (if there is a child device).
-		for k, v in pairs(luup.devices) do
-			if (v.device_num_parent == lul_device and v.id == "Appliance" .. sensor) then
-				luup.variable_set(ENERGY_SERVICE_ID, "Watts", watts, k)
-			end
+		local childDevice = CHILD_DEVICE[sensor]
+		if (childDevice ~= nil) then
+			luup.variable_set(ENERGY_SERVICE_ID, "Watts", watts, childDevice)
 		end
 
 		-- Note this appliance number, if permitted.
@@ -107,6 +140,79 @@ function incoming(lul_device, lul_data)
 		-- Log temperature.  We get it for free.
 		luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", tmpr, lul_device)
 	end
+end
+
+-- Historical data
+function historyPacket(lul_device, lul_data)
+	local matched, source, dsb, time, dsw, data
+
+	-- All history packets start the same.
+	matched, _, source, dsb, time, dsw, data = 
+		lul_data:find("^&lt;msg>&lt;src>(.-)&lt;/src>&lt;dsb>(%d-)&lt;/dsb>&lt;time>(%d%d:%d%d:%d%d)&lt;/time>&lt;hist>&lt;dsw>(%d-)&lt;/dsw>&lt;type>1&lt;/type>&lt;units>kwhr&lt;/units>(.+)&lt;/hist>&lt;/msg>$")
+	if (matched ~= nil) then
+		if (DEBUG) then luup.log("History packet:" .. data) end
+
+		-- data contains (usually) four history entries for all sensors.
+		for sensor, history in data:gfind("&lt;data>&lt;sensor>(%d)&lt;/sensor>(.-)&lt;/data>") do
+			if (DEBUG) then luup.log("History for sensor " .. sensor .. ":" .. history) end
+			local childDevice = CHILD_DEVICE[sensor]
+			if (childDevice ~= nil) then
+				local twohourlyHistoryChanged, dailyHistoryChanged, monthlyHistoryChanged 
+				local twohourlyHistoryTable, dailyHistoryTable, monthlyHistoryTable 
+				local twohourlyHistory = luup.variable_get(ENERGY_SERVICE_ID, "TwoHourlyHistory", childDevice) or ""
+				local dailyHistory = luup.variable_get(ENERGY_SERVICE_ID, "DailyHistory", childDevice) or ""
+				local monthlyHistory = luup.variable_get(ENERGY_SERVICE_ID, "MonthlyHistory", childDevice) or ""
+
+				-- Two-hourly history packet.
+				for age, value in history:gfind("&lt;h(%d-)>(.-)&lt;/h%d->") do
+					if (DEBUG) then luup.log("Two-hour history for sensor " .. sensor .. " for time " .. age .. " hours ago:" .. value) end
+					if (twohourlyHistoryChanged == nil) then
+						twohourlyHistoryTable = deserializeHistory(twohourlyHistory)
+						twohourlyHistoryChanged = true
+					end
+					twohourlyHistoryTable[age] = value
+				end
+
+				-- Daily history packet.
+				for age, value in history:gfind("&lt;d(%d-)>(.-)&lt;/d%d->") do
+					if (DEBUG) then luup.log("Daily history for sensor " .. sensor .. " for time " .. age .. " days ago:" .. value) end
+					if (dailyHistoryChanged == nil) then
+						dailyHistoryTable = deserializeHistory(dailyHistory)
+						dailyHistoryChanged = true
+					end
+					dailyHistoryTable[age] = value
+				end
+
+				-- Monthy history packet.
+				for age, value in history:gfind("&lt;m(%d-)>(.-)&lt;/m%d->") do
+					if (DEBUG) then luup.log("Monthly history for sensor " .. sensor .. " for time " .. age .. " months ago:" .. value) end
+					if (monthlyHistoryChanged == nil) then
+						monthlyHistoryTable = deserializeHistory(monthlyHistory)
+						monthlyHistoryChanged = true
+					end
+					twohourlyHistoryTable[age] = value
+				end
+
+				-- Store back the history that was changed in this packet.
+				if (twohourlyHistoryChanged) then
+					luup.variable_set(ENERGY_SERVICE_ID, "TwoHourlyHistory", serializeHistory(twohourlyHistoryTable), childDevice)
+				end
+				if (dailyHistoryChanged) then
+					luup.variable_set(ENERGY_SERVICE_ID, "DailyHistory", serializeHistory(dailyHistoryTable), childDevice)
+				end
+				if (monthlyHistoryChanged) then
+					luup.variable_set(ENERGY_SERVICE_ID, "MonthlyHistory", serializeHistory(monthlyHistoryTable), childDevice)
+				end
+			end
+		end
+	end
+end
+
+-- Called when a line of data comes in from the EnviR.
+function incoming(lul_device, lul_data)
+	if (DEBUG) then luup.log("CurrentCost incoming:" .. lul_data) end
+  realtimePacket(lul_device, lul_data)
+  historyPacket(lul_device, lul_data)
 end
 
 	</functions>
