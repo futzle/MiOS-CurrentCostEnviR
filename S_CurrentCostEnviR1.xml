@@ -23,11 +23,51 @@
   </stateVariable>
 
   <stateVariable>
-    <name>Version</name>
+    <name>DaysSinceWipe</name>
     <sendEventsAttribute>no</sendEventsAttribute>
     <dataType>string</dataType>
     <defaultValue></defaultValue>
-    <shortCode>version</shortCode>
+    <shortCode>dayssincewipe</shortCode>
+  </stateVariable>
+
+  <stateVariable>
+    <name>HistoryDaysSinceBirth</name>
+    <sendEventsAttribute>no</sendEventsAttribute>
+    <dataType>string</dataType>
+    <defaultValue></defaultValue>
+    <shortCode>historydayssincebirth</shortCode>
+  </stateVariable>
+
+  <stateVariable>
+    <name>HistoryTime</name>
+    <sendEventsAttribute>no</sendEventsAttribute>
+    <dataType>string</dataType>
+    <defaultValue></defaultValue>
+    <shortCode>historytime</shortCode>
+  </stateVariable>
+
+  <stateVariable>
+    <name>TwoHourlyHistory</name>
+    <sendEventsAttribute>no</sendEventsAttribute>
+    <dataType>string</dataType>
+    <defaultValue></defaultValue>
+    <shortCode>twohourlyhistory</shortCode>
+  </stateVariable>
+
+  <stateVariable>
+    <name>DailyHistory</name>
+    <sendEventsAttribute>no</sendEventsAttribute>
+    <dataType>string</dataType>
+    <defaultValue></defaultValue>
+    <shortCode>dailyhistory</shortCode>
+  </stateVariable>
+
+  <stateVariable>
+    <name>MonthlyHistory</name>
+    <sendEventsAttribute>no</sendEventsAttribute>
+    <dataType>string</dataType>
+    <defaultValue></defaultValue>
+    <shortCode>monthlyhistory</shortCode>
   </stateVariable>
 
 </serviceStateTable>

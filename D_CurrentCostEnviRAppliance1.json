@@ -80,10 +80,20 @@
 		},
 		{
 			"Label": {
+				"lang_tag": "history",
+				"text": "History"
+			},
+			"Position": "1",
+			"TabType": "javascript",
+			"ScriptName": "J_CurrentCostEnviR1.js",
+			"Function": "showHistory"
+		},
+		{
+			"Label": {
 				"lang_tag": "advanced",
 				"text": "Advanced"
 			},
-			"Position": "1",
+			"Position": "2",
 			"TabType": "javascript",
 			"ScriptName": "shared.js",
 			"Function": "advanced_device"
@@ -93,7 +103,7 @@
 				"lang_tag": "logs",
 				"text": "Logs"
 			},
-			"Position": "2",
+			"Position": "3",
 			"TabType": "javascript",
 			"ScriptName": "shared.js",
 			"Function": "device_logs"
@@ -103,7 +113,7 @@
 				"lang_tag": "notifications",
 				"text": "Notifications"
 			},
-			"Position": "3",
+			"Position": "4",
 			"TabType": "javascript",
 			"ScriptName": "shared.js",
 			"Function": "device_notifications"

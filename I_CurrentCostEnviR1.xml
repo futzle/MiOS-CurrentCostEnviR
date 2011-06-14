@@ -119,6 +119,8 @@ function realtimePacket(lul_device, lul_data)
 		local childDevice = CHILD_DEVICE[sensor]
 		if (childDevice ~= nil) then
 			luup.variable_set(ENERGY_SERVICE_ID, "Watts", watts, childDevice)
+			luup.variable_set(SERVICE_ID, "DaysSinceBirth", tonumber(dsb), childDevice)
+			luup.variable_set(SERVICE_ID, "Time", time, childDevice)
 		end
 
 		-- Note this appliance number, if permitted.
@@ -159,9 +161,9 @@ function historyPacket(lul_device, lul_data)
 			if (childDevice ~= nil) then
 				local twohourlyHistoryChanged, dailyHistoryChanged, monthlyHistoryChanged 
 				local twohourlyHistoryTable, dailyHistoryTable, monthlyHistoryTable 
-				local twohourlyHistory = luup.variable_get(ENERGY_SERVICE_ID, "TwoHourlyHistory", childDevice) or ""
-				local dailyHistory = luup.variable_get(ENERGY_SERVICE_ID, "DailyHistory", childDevice) or ""
-				local monthlyHistory = luup.variable_get(ENERGY_SERVICE_ID, "MonthlyHistory", childDevice) or ""
+				local twohourlyHistory = luup.variable_get(SERVICE_ID, "TwoHourlyHistory", childDevice) or ""
+				local dailyHistory = luup.variable_get(SERVICE_ID, "DailyHistory", childDevice) or ""
+				local monthlyHistory = luup.variable_get(SERVICE_ID, "MonthlyHistory", childDevice) or ""
 
 				-- Two-hourly history packet.
 				for age, value in history:gfind("&lt;h(%d-)>(.-)&lt;/h%d->") do
@@ -195,16 +197,21 @@ function historyPacket(lul_device, lul_data)
 
 				-- Store back the history that was changed in this packet.
 				if (twohourlyHistoryChanged) then
-					luup.variable_set(ENERGY_SERVICE_ID, "TwoHourlyHistory", serializeHistory(twohourlyHistoryTable), childDevice)
+					luup.variable_set(SERVICE_ID, "TwoHourlyHistory", serializeHistory(twohourlyHistoryTable), childDevice)
 				end
 				if (dailyHistoryChanged) then
-					luup.variable_set(ENERGY_SERVICE_ID, "DailyHistory", serializeHistory(dailyHistoryTable), childDevice)
+					luup.variable_set(SERVICE_ID, "DailyHistory", serializeHistory(dailyHistoryTable), childDevice)
 				end
 				if (monthlyHistoryChanged) then
-					luup.variable_set(ENERGY_SERVICE_ID, "MonthlyHistory", serializeHistory(monthlyHistoryTable), childDevice)
+					luup.variable_set(SERVICE_ID, "MonthlyHistory", serializeHistory(monthlyHistoryTable), childDevice)
 				end
+				luup.variable_set(SERVICE_ID, "HistoryDaysSinceBirth", tonumber(dsb), childDevice)
+				luup.variable_set(SERVICE_ID, "HistoryTime", time, childDevice)
 			end
 		end
+
+		-- Log the days-since-wipe value.
+		luup.variable_set(SERVICE_ID, "HistoryDaysSinceWipe", tonumber(dsw), childDevice)
 	end
 end
 

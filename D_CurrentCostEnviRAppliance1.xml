@@ -9,6 +9,11 @@
 		<staticJson>D_CurrentCostEnviRAppliance1.json</staticJson>
 		<serviceList>
 			<service>
+				<serviceType>urn:schemas-futzle-com:service:CurrentCostEnviR:1</serviceType>
+				<serviceId>urn:futzle-com:serviceId:CurrentCostEnviR1</serviceId>
+				<SCPDURL>S_CurrentCostEnviR1.xml</SCPDURL>
+			</service>
+			<service>
 				<serviceType>urn:schemas-micasaverde-com:service:EnergyMetering:1</serviceType>
 				<serviceId>urn:micasaverde-com:serviceId:EnergyMetering1</serviceId>
 				<SCPDURL>S_EnergyMetering1.xml</SCPDURL>
