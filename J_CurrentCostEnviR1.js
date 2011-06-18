@@ -91,13 +91,22 @@ function showTwohourlyHistory(deviceId, l)
 	uri += "&chxp=1" + datePosition;
 	uri += "&chxr=0,0," + max + "|1," + (l - 1.5) + ",0.5";
 	uri += "&chxs=0,676767,10.5,1,l,676767|1,676767,11.5,0,lt,676767";
-	uri += "&chxtc=1,0,5";
+	uri += "&chxtc=1,0,8";
 	uri += "&chxt=y,x";
 
 	uri += "&chbh=a,1,0";
 	uri += "&chs=620x130";
 	uri += "&cht=bvs";
-	uri += "&chco=4D89F9";
+	today = new Date();
+	var barColours = new Array();
+	var historyColour = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "TwoHourlyHistoryColour", 0);
+	if (historyColour == undefined || historyColour == "") { historyColour = "'4D89F9'"; }
+	for (i = 2; i < l*2-2; i += 2)
+	{
+		var time = new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() - i, 0, 0, 0)
+		barColours.push(eval(historyColour));
+	}
+	uri += "&chco=" + barColours.reverse().join("|");
 	// Y scale.
 	uri += "&chds=0," + max;
 	// Data.
@@ -136,14 +145,18 @@ function showDailyHistory(deviceId, l)
 	var dateLegendText = "";
 	var dayOfWeekPosition = "";
 	var datePosition = "";
+	var barColours = new Array();
+	var historyColour = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "DailyHistoryColour", 0);
+	if (historyColour == undefined || historyColour == "") { historyColour = "'4D89F9'"; }
 	for (i = 1; i < l; i++)
 	{
-		var dayOfWeek = new Date(today.getFullYear(), today.getMonth(),
+		var time = new Date(today.getFullYear(), today.getMonth(),
 			today.getDate() - i, 12, 0, 0, 0);
-		dayOfWeekLegendText += "|" + dayNames[dayOfWeek.getDay()];
+		dayOfWeekLegendText += "|" + dayNames[time.getDay()];
 		dayOfWeekPosition += "," + i;
+		barColours.push(eval(historyColour));
 		if (i % 2 == 0) { continue; }
-		dateLegendText += "|" + dayOfWeek.getDate();
+		dateLegendText += "|" + time.getDate();
 		datePosition += "," + i;
 	}
 	uri += "&chxl=1:" + dayOfWeekLegendText + "|2:" + dateLegendText;
@@ -155,7 +168,7 @@ function showDailyHistory(deviceId, l)
 	uri += "&chbh=a,1,0";
 	uri += "&chs=620x130";
 	uri += "&cht=bvs";
-	uri += "&chco=4D89F9";
+	uri += "&chco=" + barColours.reverse().join("|");
 	// Y scale.
 	uri += "&chds=0," + max;
 	// Data.
@@ -192,12 +205,16 @@ function showMonthlyHistory(deviceId, l)
 	var monthNames = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 	var dateLegendText = "";
 	var datePosition = "";
+	var barColours = new Array();
+	var historyColour = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "MonthlyHistoryColour", 0);
+	if (historyColour == undefined || historyColour == "") { historyColour = "'4D89F9'"; }
 	for (i = 1; i < l; i++)
 	{
-		var dayOfWeek = new Date(today.getFullYear(), today.getMonth() - i,
+		var time = new Date(today.getFullYear(), today.getMonth() - i,
 			today.getDate(), 12, 0, 0, 0);
-		monthLegendText += "|" + monthNames[dayOfWeek.getMonth()];
+		monthLegendText += "|" + monthNames[time.getMonth()];
 		monthPosition += "," + i;
+		barColours.push(eval(historyColour));
 	}
 	uri += "&chxl=1:" + monthLegendText;
 	uri += "&chxp=1" + monthPosition;
@@ -208,7 +225,7 @@ function showMonthlyHistory(deviceId, l)
 	uri += "&chbh=a,1,0";
 	uri += "&chs=620x130";
 	uri += "&cht=bvs";
-	uri += "&chco=4D89F9";
+	uri += "&chco=" + barColours.reverse().join("|");
 	// Y scale.
 	uri += "&chds=0," + max;
 	// Data.
