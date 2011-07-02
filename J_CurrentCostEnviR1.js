@@ -64,7 +64,9 @@ function showTwohourlyHistory(deviceId, l)
 	var historyArray = getHistoryArray(historyObject, 4, 2, 2*l);
 
 	var max = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.max(a, b); }}));
-	if (isNaN(max)) { max = 0; }
+	if (isNaN(max) || max < 0) { max = 0; }
+	var min = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.min(a, b); }}));
+	if (isNaN(min) || min > 0) { min = 0; }
 
 	var uri = "http://chart.apis.google.com/chart";
 	uri += "?chxr=0,-11.667,160";
@@ -91,7 +93,7 @@ function showTwohourlyHistory(deviceId, l)
 	}
 	uri += "&chxl=1:" + dateLegendText;
 	uri += "&chxp=1" + datePosition;
-	uri += "&chxr=0,0," + max + "|1," + (l - 1.5) + ",0.5";
+	uri += "&chxr=0," + min + "," + max + "|1," + (l - 1.5) + ",0.5";
 	uri += "&chxs=0,676767,10.5,1,l,676767|1,676767,11.5,0,lt,676767";
 	uri += "&chxtc=1,0,8";
 	uri += "&chxt=y,x";
@@ -110,7 +112,7 @@ function showTwohourlyHistory(deviceId, l)
 	}
 	uri += "&chco=" + barColours.reverse().join("|");
 	// Y scale.
-	uri += "&chds=0," + max;
+	uri += "&chds=" + min + "," + max;
 	// Data.
 	uri += "&chd=t:"
 		+ historyArray.map(valueToChartSymbol).reverse().join(",");
@@ -130,7 +132,9 @@ function showDailyHistory(deviceId, l)
 	var historyArray = getHistoryArray(historyObject, 1, 1, l+1);
 
 	var max = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.max(a, b); }}));
-	if (isNaN(max)) { max = 0; }
+	if (isNaN(max) || max < 0) { max = 0; }
+	var min = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.min(a, b); }}));
+	if (isNaN(min) || min > 0) { min = 0; }
 
 	var uri = "http://chart.apis.google.com/chart";
 	uri += "?chxr=0,-11.667,160";
@@ -164,7 +168,7 @@ function showDailyHistory(deviceId, l)
 	}
 	uri += "&chxl=1:" + dayOfWeekLegendText + "|2:" + dateLegendText;
 	uri += "&chxp=1" + dayOfWeekPosition + "|2" + datePosition;
-	uri += "&chxr=0,0," + max + "|1," + (l + 0.5) + ",0.5|2," + (l + 0.5) + ",0.5";
+	uri += "&chxr=0," + min + "," + max + "|1," + (l + 0.5) + ",0.5|2," + (l + 0.5) + ",0.5";
 	uri += "&chxs=0,676767,10.5,1,l,676767";
 	uri += "&chxt=y,x,x";
 
@@ -173,7 +177,7 @@ function showDailyHistory(deviceId, l)
 	uri += "&cht=bvs";
 	uri += "&chco=" + barColours.reverse().join("|");
 	// Y scale.
-	uri += "&chds=0," + max;
+	uri += "&chds=" + min + "," + max;
 	// Data.
 	uri += "&chd=t:"
 		+ historyArray.map(valueToChartSymbol).reverse().join(",");
@@ -193,7 +197,9 @@ function showMonthlyHistory(deviceId, l)
 	var historyArray = getHistoryArray(historyObject, 1, 1, l+1);
 
 	var max = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.max(a, b); }}));
-	if (isNaN(max)) { max = 0; }
+	if (isNaN(max) || max < 0) { max = 0; }
+	var min = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.min(a, b); }}));
+	if (isNaN(min) || min > 0) { min = 0; }
 
 	var uri = "http://chart.apis.google.com/chart";
 	uri += "?chxr=0,-11.667,160";
@@ -222,7 +228,7 @@ function showMonthlyHistory(deviceId, l)
 	}
 	uri += "&chxl=1:" + monthLegendText;
 	uri += "&chxp=1" + monthPosition;
-	uri += "&chxr=0,0," + max + "|1," + (l + 0.5) + ",0.5";
+	uri += "&chxr=0," + min + "," + max + "|1," + (l + 0.5) + ",0.5";
 	uri += "&chxs=0,676767,10.5,1,l,676767";
 	uri += "&chxt=y,x";
 
@@ -231,7 +237,7 @@ function showMonthlyHistory(deviceId, l)
 	uri += "&cht=bvs";
 	uri += "&chco=" + barColours.reverse().join("|");
 	// Y scale.
-	uri += "&chds=0," + max;
+	uri += "&chds=" + min + "," + max;
 	// Data.
 	uri += "&chd=t:"
 		+ historyArray.map(valueToChartSymbol).reverse().join(",");
