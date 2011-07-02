@@ -127,7 +127,7 @@ function showDailyHistory(deviceId, l)
 	dailyHistoryString = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "DailyHistory", 1);
 	if (dailyHistoryString == undefined) { return ""; }
 	var historyObject = deserializeHistory(dailyHistoryString);
-	var historyArray = getHistoryArray(historyObject, 1, 1, l);
+	var historyArray = getHistoryArray(historyObject, 1, 1, l+1);
 
 	var max = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.max(a, b); }}));
 	if (isNaN(max)) { max = 0; }
@@ -190,7 +190,7 @@ function showMonthlyHistory(deviceId, l)
 	monthlyHistoryString = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "MonthlyHistory", 1);
 	if (monthlyHistoryString == undefined) { return ""; }
 	var historyObject = deserializeHistory(monthlyHistoryString);
-	var historyArray = getHistoryArray(historyObject, 1, 1, l);
+	var historyArray = getHistoryArray(historyObject, 1, 1, l+1);
 
 	var max = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.max(a, b); }}));
 	if (isNaN(max)) { max = 0; }
