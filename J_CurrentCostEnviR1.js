@@ -4,6 +4,7 @@ function deserializeHistory(s)
 {
 	var t = new Object();
 	var matches = s.match(/[^;]+;/g);
+	if (matches == undefined) { return t; }
 	var i;
 	for (i = 0; i < matches.length; i++)
 	{
@@ -63,6 +64,7 @@ function showTwohourlyHistory(deviceId, l)
 	var historyArray = getHistoryArray(historyObject, 4, 2, 2*l);
 
 	var max = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.max(a, b); }}));
+	if (isNaN(max)) { max = 0; }
 
 	var uri = "http://chart.apis.google.com/chart";
 	uri += "?chxr=0,-11.667,160";
@@ -128,6 +130,7 @@ function showDailyHistory(deviceId, l)
 	var historyArray = getHistoryArray(historyObject, 1, 1, l);
 
 	var max = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.max(a, b); }}));
+	if (isNaN(max)) { max = 0; }
 
 	var uri = "http://chart.apis.google.com/chart";
 	uri += "?chxr=0,-11.667,160";
@@ -148,7 +151,7 @@ function showDailyHistory(deviceId, l)
 	var barColours = new Array();
 	var historyColour = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "DailyHistoryColour", 0);
 	if (historyColour == undefined || historyColour == "") { historyColour = "'4D89F9'"; }
-	for (i = 1; i < l; i++)
+	for (i = 1; i <= l; i++)
 	{
 		var time = new Date(today.getFullYear(), today.getMonth(),
 			today.getDate() - i, 12, 0, 0, 0);
@@ -161,7 +164,7 @@ function showDailyHistory(deviceId, l)
 	}
 	uri += "&chxl=1:" + dayOfWeekLegendText + "|2:" + dateLegendText;
 	uri += "&chxp=1" + dayOfWeekPosition + "|2" + datePosition;
-	uri += "&chxr=0,0," + max + "|1," + (l - 0.5) + ",0.5|2," + (l - 0.5) + ",0.5";
+	uri += "&chxr=0,0," + max + "|1," + (l + 0.5) + ",0.5|2," + (l + 0.5) + ",0.5";
 	uri += "&chxs=0,676767,10.5,1,l,676767";
 	uri += "&chxt=y,x,x";
 
@@ -190,6 +193,7 @@ function showMonthlyHistory(deviceId, l)
 	var historyArray = getHistoryArray(historyObject, 1, 1, l);
 
 	var max = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.max(a, b); }}));
+	if (isNaN(max)) { max = 0; }
 
 	var uri = "http://chart.apis.google.com/chart";
 	uri += "?chxr=0,-11.667,160";
@@ -203,24 +207,24 @@ function showMonthlyHistory(deviceId, l)
 	// Mid-month.
 	today.setDate(15);
 	var monthNames = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
-	var dateLegendText = "";
-	var datePosition = "";
+	var monthLegendText = "";
+	var monthPosition = "";
 	var barColours = new Array();
 	var historyColour = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "MonthlyHistoryColour", 0);
 	if (historyColour == undefined || historyColour == "") { historyColour = "'4D89F9'"; }
-	for (i = 1; i < l; i++)
+	for (i = 1; i <= l; i++)
 	{
 		var time = new Date(today.getFullYear(), today.getMonth() - i,
-			today.getDate(), 12, 0, 0, 0);
+			15, 12, 0, 0, 0);
 		monthLegendText += "|" + monthNames[time.getMonth()];
 		monthPosition += "," + i;
 		barColours.push(eval(historyColour));
 	}
 	uri += "&chxl=1:" + monthLegendText;
 	uri += "&chxp=1" + monthPosition;
-	uri += "&chxr=0,0," + max + "|1," + (l - 0.5) + ",0.5|2," + (l - 0.5) + ",0.5";
+	uri += "&chxr=0,0," + max + "|1," + (l + 0.5) + ",0.5";
 	uri += "&chxs=0,676767,10.5,1,l,676767";
-	uri += "&chxt=y,x,x";
+	uri += "&chxt=y,x";
 
 	uri += "&chbh=a,1,0";
 	uri += "&chs=620x130";
