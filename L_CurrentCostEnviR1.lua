@@ -2,23 +2,35 @@ module ("L_CurrentCostEnviR1", package.seeall)
 
 -- Power used/consumed by each appliance (0 is the "whole house" appliance).
 APPLIANCE_POWER = { }
+-- Service ID strings used by this device.
 SERVICE_ID = "urn:futzle-com:serviceId:CurrentCostEnviR1"
 ENERGY_SERVICE_ID = "urn:micasaverde-com:serviceId:EnergyMetering1"
 TEMPERATURE_SERVICE_ID = "urn:upnp-org:serviceId:TemperatureSensor1"
+-- Cache of child devices, maps appliance number to MiOS device ID.
 CHILD_DEVICE = { }
+-- History caches for each appliance, for three time scales.
 TWOHOURLY_HISTORY = { ["0"] = { }, ["1"] = { }, ["2"] = { }, ["3"] = { }, ["4"] = { }, ["5"] = { }, ["6"] = { }, ["7"] = { }, ["8"] = { }, ["9"] = { } }
 DAILY_HISTORY = { ["0"] = { }, ["1"] = { }, ["2"] = { }, ["3"] = { }, ["4"] = { }, ["5"] = { }, ["6"] = { }, ["7"] = { }, ["8"] = { }, ["9"] = { } }
 MONTHLY_HISTORY = { ["0"] = { }, ["1"] = { }, ["2"] = { }, ["3"] = { }, ["4"] = { }, ["5"] = { }, ["6"] = { }, ["7"] = { }, ["8"] = { }, ["9"] = { } }
+-- Set to the current Unix timestamp when history packets start coming in.
+-- Used to determine when the history transmission has been exhausted,
+-- and the history variables on the devices should be updated..
 HISTORY_LAST_UPDATED = nil
-DEBUG = true
+-- Print lots of useless debugging information to the Luup log.
+DEBUG = false
 
 -- Run once at Luup engine startup.
 function initialize(lul_device)
 	luup.log("Initializing CurrentCost EnviR")
+
 	-- Help prevent race condition
 	luup.io.intercept()
 
 	-- Create child devices for the attached appliances.
+	-- The variables Appliance0 .. Appliance9 will have been created by the
+	-- plugin on a previous execution based on the devices mentioned in the
+	-- realtime XML output, so the plugin needs at least one
+	-- restart in order to create child devices.
 	local childDevices = luup.chdev.start(lul_device)
 	for child = 0, 9 do
 		if (luup.variable_get(SERVICE_ID, "Appliance" .. tostring(child), lul_device) or "0" ~= "0") then
@@ -45,7 +57,7 @@ function initialize(lul_device)
 	end
 	luup.log("Power formula: " .. FORMULA)
 
-	-- Automatically detect appliances and create child devices
+	-- Flag: automatically detect appliances and create child devices
 	-- the next time that the Luup engine is reloaded.
 	AUTO_DETECT = luup.variable_get(SERVICE_ID, "ApplianceAutoDetect", lul_device)
 	if (AUTO_DETECT == nil) then
@@ -64,6 +76,8 @@ function initialize(lul_device)
 			end
 		end
 	end
+
+	-- Startup is done.
 end
 
 -- Compute parent device's display.
@@ -163,14 +177,17 @@ function processHistData(context, lul_device, dataContent)
 	local matched, sensor, historyPoints
 	matched, _, sensor, historyPoints = dataContent:find("^<sensor>(%d)</sensor>(.-)$")
 	if (matched) then
+		-- Look for two-hourly history datapoints in the form <h004>.
 		for age, value in historyPoints:gfind("<h(%d-)>(.-)</h%d->") do
 			if (DEBUG) then luup.log("Two-hour history for sensor " .. sensor .. " for time " .. age .. " hours ago: " .. value) end
 			TWOHOURLY_HISTORY[sensor][age] = tonumber(value)
 		end
+		-- Look for daily history datapoints in the form <d001>.
 		for age, value in historyPoints:gfind("<d(%d-)>(.-)</d%d->") do
 			if (DEBUG) then luup.log("Daily history for sensor " .. sensor .. " for time " .. age .. " days ago: " .. value) end
 			DAILY_HISTORY[sensor][age] = tonumber(value)
 		end
+		-- Look for monthly history datapoints in the form <m001>.
 		for age, value in historyPoints:gfind("<m(%d-)>(.-)</m%d->") do
 			if (DEBUG) then luup.log("Monthly history for sensor " .. sensor .. " for time " .. age .. " months ago: " .. value) end
 			MONTHLY_HISTORY[sensor][age] = tonumber(value)
@@ -187,6 +204,7 @@ XML_HIST_DISPATCH = {
 function processHistContext(context, lul_device)
 	if (DEBUG) then luup.log("Postprocessing history") end
 	HISTORY_LAST_UPDATED = os.date("%s")
+	-- To do: store Days Since Wipe from <dsw>.  Suspect it's needed to know what a "month" is.
 end
 
 -- <hist> is a history packet.
@@ -200,6 +218,7 @@ function processMsgHist(context, lul_device, histContent)
 			context[element] = content
 		end
 	end
+	-- Postprocess the history packet.
 	processHistContext(context, lul_device)
 	return context
 end
@@ -237,7 +256,7 @@ function processMsgContext(context, lul_device)
 			luup.variable_set(SERVICE_ID, "Appliance" .. context.sensor, context.id, lul_device)
 		end
 
-		-- Compute parent device's reading.
+		-- Compute parent device's reading, using its custom formula.
 		APPLIANCE_POWER[context.sensor] = context.watts
 		luup.variable_set(ENERGY_SERVICE_ID, "Watts", calculateFormula(APPLIANCE_POWER), lul_device)
 	end
@@ -262,17 +281,21 @@ end
 
 -- Update the history of the main device and of children.
 function updateHistory(lul_device)
+	-- Each child device.
 	for sensor = 0, 9 do
 		local childDevice = CHILD_DEVICE[tostring(sensor)]
 		if (childDevice ~= nil) then
 			luup.variable_set(SERVICE_ID, "TwoHourlyHistory", serializeHistory(TWOHOURLY_HISTORY[tostring(sensor)]), childDevice)
 			luup.variable_set(SERVICE_ID, "DailyHistory", serializeHistory(DAILY_HISTORY[tostring(sensor)]), childDevice)
 			luup.variable_set(SERVICE_ID, "MonthlyHistory", serializeHistory(MONTHLY_HISTORY[tostring(sensor)]), childDevice)
+			luup.variable_set(SERVICE_ID, "HistoryUpdateTimestamp", HISTORY_LAST_UPDATED, childDevice)
 		end
 	end
+	-- Parent device.
 	luup.variable_set(SERVICE_ID, "TwoHourlyHistory", serializeHistory(formulaHistory(lul_device, TWOHOURLY_HISTORY)), lul_device)
 	luup.variable_set(SERVICE_ID, "DailyHistory", serializeHistory(formulaHistory(lul_device, DAILY_HISTORY)), lul_device)
 	luup.variable_set(SERVICE_ID, "MonthlyHistory", serializeHistory(formulaHistory(lul_device, MONTHLY_HISTORY)), lul_device)
+	luup.variable_set(SERVICE_ID, "HistoryUpdateTimestamp", HISTORY_LAST_UPDATED, lul_device)
 end
 
 -- Process a packet.  The packet might be real-time or history.
@@ -285,16 +308,23 @@ function processPacket(lul_device, lul_data)
 		local context = { }
 		for element, content in msgBody:gfind("<(.+)>(.-)</%1>") do
 			if (DEBUG) then luup.log("Processing element in <msg>: " .. element) end
+			-- Call the handler for this element, or just note the string.
 			if (XML_MSG_DISPATCH[element]) then
 				context = XML_MSG_DISPATCH[element](context, lul_device, content)
 			else
 				context[element] = content
 			end
 		end
+		-- Postprocess the information we learned from the packet.
 		processMsgContext(context, lul_device)
+
+		-- If it's been about 25 seconds since the last history packet,
+		-- probably the history burst has finished.  Update the history
+		-- variables on the parent and child devices.
 		if (HISTORY_LAST_UPDATED and os.date("%s") - HISTORY_LAST_UPDATED > 25) then
 			if (DEBUG) then luup.log("Updating history") end
 			updateHistory(lul_device);
+			-- Go silent until the next history burst, 2ish hours from now.
 			HISTORY_LAST_UPDATED = nil
 		end
 	end

@@ -55,17 +55,17 @@ function valueToChartSymbol(x)
 }
 
 /* Two-hourly history for the last 7 days. */
-function showTwohourlyHistory(deviceId, l)
+function showTwohourlyHistory(deviceId, l, width, height)
 {
 	var twohourlyHistoryString;
 	twohourlyHistoryString = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "TwoHourlyHistory", 1);
-	if (twohourlyHistoryString == undefined) { return "No history yet"; }
+	if (twohourlyHistoryString == undefined) { return ""; }
 	var historyObject = deserializeHistory(twohourlyHistoryString);
 	var historyArray = getHistoryArray(historyObject, 4, 2, 2*l);
 
 	var max = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.max(a, b); }}));
 	if (isNaN(max) || max < 0) { max = 0; }
-	var min = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.min(a, b); }}));
+	var min = Math.floor(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.min(a, b); }}));
 	if (isNaN(min) || min > 0) { min = 0; }
 
 	var uri = "http://chart.apis.google.com/chart";
@@ -75,7 +75,9 @@ function showTwohourlyHistory(deviceId, l)
 	var dates = new Array();
 	var i;
 	var j;
-	var today = new Date();
+	var historyUpdateTimestamp = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "HistoryUpdateTimestamp", 1);
+	if (historyUpdateTimestamp == undefined) { return ""; }
+	var today = new Date((historyUpdateTimestamp - 0) * 1000);
 	today.setMilliseconds(0);
 	today.setSeconds(0);
 	today.setMinutes(0);
@@ -99,9 +101,9 @@ function showTwohourlyHistory(deviceId, l)
 	uri += "&chxt=y,x";
 
 	uri += "&chbh=a,1,0";
-	uri += "&chs=620x130";
+	uri += "&chs=" + width + "x" + height;
 	uri += "&cht=bvs";
-	today = new Date();
+	var today = new Date((historyUpdateTimestamp - 0) * 1000);
 	var barColours = new Array();
 	var historyColour = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "TwoHourlyHistoryColour", 0);
 	if (historyColour == undefined || historyColour == "") { historyColour = "'4D89F9'"; }
@@ -123,7 +125,7 @@ function showTwohourlyHistory(deviceId, l)
 }
 
 /* Daily history for the last l days. */
-function showDailyHistory(deviceId, l)
+function showDailyHistory(deviceId, l, width, height)
 {
 	var dailyHistoryString;
 	dailyHistoryString = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "DailyHistory", 1);
@@ -133,7 +135,7 @@ function showDailyHistory(deviceId, l)
 
 	var max = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.max(a, b); }}));
 	if (isNaN(max) || max < 0) { max = 0; }
-	var min = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.min(a, b); }}));
+	var min = Math.floor(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.min(a, b); }}));
 	if (isNaN(min) || min > 0) { min = 0; }
 
 	var uri = "http://chart.apis.google.com/chart";
@@ -142,7 +144,9 @@ function showDailyHistory(deviceId, l)
 	// Axes and legend.
 	var dates = new Array();
 	var i;
-	var today = new Date();
+	var historyUpdateTimestamp = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "HistoryUpdateTimestamp", 1);
+	if (historyUpdateTimestamp == undefined) { return ""; }
+	var today = new Date((historyUpdateTimestamp - 0) * 1000);
 	// CurrentCost daily/monthly history counts days 11pm to 11 pm.
 	if (today.getHours() >= 23) { today.setDate(today.getDate()+1); }
 	// Around noon to avoid issues with daylight saving.
@@ -173,7 +177,7 @@ function showDailyHistory(deviceId, l)
 	uri += "&chxt=y,x,x";
 
 	uri += "&chbh=a,1,0";
-	uri += "&chs=620x130";
+	uri += "&chs=" + width + "x" + height;
 	uri += "&cht=bvs";
 	uri += "&chco=" + barColours.reverse().join("|");
 	// Y scale.
@@ -188,7 +192,7 @@ function showDailyHistory(deviceId, l)
 }
 
 /* Monthly history for the last l months */
-function showMonthlyHistory(deviceId, l)
+function showMonthlyHistory(deviceId, l, width, height)
 {
 	var monthlyHistoryString;
 	monthlyHistoryString = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "MonthlyHistory", 1);
@@ -198,7 +202,7 @@ function showMonthlyHistory(deviceId, l)
 
 	var max = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.max(a, b); }}));
 	if (isNaN(max) || max < 0) { max = 0; }
-	var min = Math.ceil(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.min(a, b); }}));
+	var min = Math.floor(historyArray.reduce(function (a, b) { if (a == undefined) return b; else { if (b == undefined) return a; else return Math.min(a, b); }}));
 	if (isNaN(min) || min > 0) { min = 0; }
 
 	var uri = "http://chart.apis.google.com/chart";
@@ -207,7 +211,9 @@ function showMonthlyHistory(deviceId, l)
 	// Axes and legend.
 	var dates = new Array();
 	var i;
-	var today = new Date();
+	var historyUpdateTimestamp = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "HistoryUpdateTimestamp", 1);
+	if (historyUpdateTimestamp == undefined) { return ""; }
+	var today = new Date((historyUpdateTimestamp - 0) * 1000);
 	// CurrentCost daily/monthly history counts days 11pm to 11 pm.
 	if (today.getHours() >= 23) { today.setDate(today.getDate()+1); }
 	// Mid-month.
@@ -233,7 +239,7 @@ function showMonthlyHistory(deviceId, l)
 	uri += "&chxt=y,x";
 
 	uri += "&chbh=a,1,0";
-	uri += "&chs=620x130";
+	uri += "&chs=" + width + "x" + height;
 	uri += "&cht=bvs";
 	uri += "&chco=" + barColours.reverse().join("|");
 	// Y scale.
@@ -250,18 +256,26 @@ function showMonthlyHistory(deviceId, l)
 /* Entry function for history tab. */
 function showHistory(deviceId)
 {
+	var historyUpdateTimestamp = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "HistoryUpdateTimestamp", 1);
+	if (historyUpdateTimestamp == undefined) { return false; }
+	var today = new Date((historyUpdateTimestamp - 0) * 1000);
+
 	var htmlResult = "";
 	
-	htmlResult += "<div>";
-	htmlResult += showTwohourlyHistory(deviceId, 84);
+	htmlResult += "<p>";
+	htmlResult += "History last updated: " + today.toLocaleString();
+	htmlResult += "</p>";
+
+	htmlResult += "<div style='border-top: 1px black solid; padding: 2px 0;'>";
+	htmlResult += showTwohourlyHistory(deviceId, 84, 620, 110);
 	htmlResult +="</div>";	
 
-	htmlResult += "<div>";
-	htmlResult += showDailyHistory(deviceId, 31);
+	htmlResult += "<div style='border-top: 1px black solid; padding: 2px 0;'>";
+	htmlResult += showDailyHistory(deviceId, 31, 620, 110);
 	htmlResult +="</div>";	
 
-	htmlResult += "<div>";
-	htmlResult += showMonthlyHistory(deviceId, 24);
+	htmlResult += "<div style='border-top: 1px black solid; border-bottom: 1px black solid; padding: 2px 0;'>";
+	htmlResult += showMonthlyHistory(deviceId, 24, 620, 110);
 	htmlResult +="</div>";	
 
 	set_panel_html(htmlResult);
