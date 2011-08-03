@@ -121,7 +121,7 @@ function showTwohourlyHistory(deviceId, l, width, height)
 	uri += "&chg=-1,5,0,4";
 	// Chart title.
 	uri += "&chtt=Two-hourly+History";
-	return "<img src=\"" + uri + "\" width=\"100%\"/>";
+	return uri;
 }
 
 /* Daily history for the last l days. */
@@ -188,7 +188,7 @@ function showDailyHistory(deviceId, l, width, height)
 	uri += "&chg=-1,5,0,4";
 	// Chart title.
 	uri += "&chtt=Daily+History";
-	return "<img src=\"" + uri + "\" width=\"100%\"/>";
+	return uri;
 }
 
 /* Monthly history for the last l months */
@@ -250,7 +250,16 @@ function showMonthlyHistory(deviceId, l, width, height)
 	uri += "&chg=-1,5,0,4";
 	// Chart title.
 	uri += "&chtt=Monthly+History";
-	return "<img src=\"" + uri + "\" width=\"100%\"/>";
+	return uri;
+}
+
+function onHistoryDropdownChange(selection, imageId, f, deviceId, width, height)
+{
+	var myindex  = selection.selectedIndex;
+	var SelValue = selection.options[myindex].value;
+	var newUrl = f(deviceId, SelValue - 0, width, height);
+	document.getElementById(imageId).src=newUrl;
+	return false;
 }
 
 /* Entry function for history tab. */
@@ -260,23 +269,58 @@ function showHistory(deviceId)
 	if (historyUpdateTimestamp == undefined) { return false; }
 	var today = new Date((historyUpdateTimestamp - 0) * 1000);
 
+	var width = 540;
+	var height = 110;
+
 	var htmlResult = "";
 	
 	htmlResult += "<p>";
 	htmlResult += "History last updated: " + today.toLocaleString();
 	htmlResult += "</p>";
 
-	htmlResult += "<div style='border-top: 1px black solid; padding: 2px 0;'>";
-	htmlResult += showTwohourlyHistory(deviceId, 84, 620, 110);
-	htmlResult +="</div>";	
+	htmlResult += "<table border='0' padding='0'>";
 
-	htmlResult += "<div style='border-top: 1px black solid; padding: 2px 0;'>";
-	htmlResult += showDailyHistory(deviceId, 31, 620, 110);
-	htmlResult +="</div>";	
+	htmlResult += "<tr style='border-top: 1px black solid; padding: 2px 0;'>";
+	htmlResult += "<td width='540px'>";
+	htmlResult += "<img id='CurrentCostEnvir1_TwohourlyHistory' src='" + showTwohourlyHistory(deviceId, 84, width, 110) + "' width='100%' />";
+	htmlResult += "</td><td>";
+	htmlResult += "<form>";
+	htmlResult += "<select name='CurrentCostEnvir1_select_TwohourlyHistory' onchange='onHistoryDropdownChange(this.form.CurrentCostEnvir1_select_TwohourlyHistory, \"CurrentCostEnvir1_TwohourlyHistory\", showTwohourlyHistory, " + deviceId + ", " + width + ", " + height + ")'>";
+	htmlResult += "<option value='24'>2d</option>";
+	htmlResult += "<option value='48'>4d</option>";
+	htmlResult += "<option value='84' selected='selected'>7d</option>";
+	htmlResult += "</select>";
+	htmlResult += "</form>";
+	htmlResult += "</td></tr>";	
 
-	htmlResult += "<div style='border-top: 1px black solid; border-bottom: 1px black solid; padding: 2px 0;'>";
-	htmlResult += showMonthlyHistory(deviceId, 24, 620, 110);
-	htmlResult +="</div>";	
+	htmlResult += "<tr style='border-top: 1px black solid; padding: 2px 0;'>";
+	htmlResult += "<td>";
+	htmlResult += "<img id='CurrentCostEnvir1_DailyHistory' src='" + showDailyHistory(deviceId, 31, width, height) + "' width='100%' />";
+	htmlResult += "</td><td>";
+	htmlResult += "<form>";
+	htmlResult += "<select name='CurrentCostEnvir1_select_DailyHistory' onchange='onHistoryDropdownChange(this.form.CurrentCostEnvir1_select_DailyHistory, \"CurrentCostEnvir1_DailyHistory\", showDailyHistory, " + deviceId + ", " + width + ", " + height + ")'>";
+	htmlResult += "<option value='7'>7d</option>";
+	htmlResult += "<option value='14'>14d</option>";
+	htmlResult += "<option value='31' selected='selected'>31d</option>";
+	htmlResult += "<option value='60'>60d</option>";
+	htmlResult += "</select>";
+	htmlResult += "</form>";
+	htmlResult += "</td></tr>";	
+
+	htmlResult += "<tr style='border-top: 1px black solid; border-top: 1px black solid; padding: 2px 0;'>";
+	htmlResult += "<td>";
+	htmlResult += "<img id='CurrentCostEnvir1_MonthlyHistory' src='" + showMonthlyHistory(deviceId, 24, width, height) + "' width='100%' />";
+	htmlResult += "</td><td>";
+	htmlResult += "<form>";
+	htmlResult += "<select name='CurrentCostEnvir1_select_MonthlyHistory' onchange='onHistoryDropdownChange(this.form.CurrentCostEnvir1_select_MonthlyHistory, \"CurrentCostEnvir1_MonthlyHistory\", showMonthlyHistory, " + deviceId + ", " + width + ", " + height + ")'>";
+	htmlResult += "<option value='12'>12m</option>";
+	htmlResult += "<option value='24' selected='selected'>24m</option>";
+	htmlResult += "<option value='48'>48m</option>";
+	htmlResult += "</select>";
+	htmlResult += "</form>";
+	htmlResult += "</td></tr>";	
+
+	htmlResult +="</table>";
 
 	set_panel_html(htmlResult);
 	return true;

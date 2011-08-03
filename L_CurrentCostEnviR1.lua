@@ -120,12 +120,14 @@ end
 
 -- <src> contains version of the CurrentCost protocol.
 function processMsgSrc(context, lul_device, source)
+	context.version = source
 	luup.variable_set(SERVICE_ID, "Version", source, lul_device)
 	return context
 end
 
 -- <uid> contains a pseudo-unique string for this EnviR.
 function processMsgUid(context, lul_device, uid)
+	context.version = uid
 	luup.variable_set(SERVICE_ID, "UID", uid, lul_device)
 	return context
 end
@@ -249,6 +251,11 @@ function processMsgContext(context, lul_device)
 			luup.variable_set(ENERGY_SERVICE_ID, "Watts", context.watts, childDevice)
 			luup.variable_set(SERVICE_ID, "DaysSinceBirth", context.dsb, childDevice)
 			luup.variable_set(SERVICE_ID, "Time", context.time, childDevice)
+			luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, childDevice)
+			luup.variable_set(SERVICE_ID, "Version", context.version, childDevice)
+			luup.variable_set(SERVICE_ID, "UID", uid, childDevice)
+			luup.variable_set(SERVICE_ID, "DaysSinceBirth", tonumber(dsb), childDevice)
+			luup.variable_set(SERVICE_ID, "Time", time, childDevice)
 		end
 
 		-- Note this appliance number, if permitted.

@@ -36,7 +36,6 @@
 			"Control": [
 				{
 					"ControlGroup": "1",
-					"ControlPair": "1",
 					"ControlHeader": "1",
 					"ControlType": "label",
 					"Label": {
@@ -52,7 +51,6 @@
 				},
 				{
 					"ControlGroup": "1",
-					"ControlPair": "1",
 					"ControlHeader": "1",
 					"ControlType": "variable",
 					"Display": {
@@ -66,7 +64,6 @@
 				},
 				{
 					"ControlGroup":"1",
-					"ControlPair":"1",
 					"ControlHeader":"1",
 					"ControlType": "label",
 					"Label": {
@@ -83,8 +80,6 @@
 
 				{
 					"ControlGroup": "2",
-					"ControlPair": "2",
-					"ControlHeader": "2",
 					"ControlType": "label",
 					"Label": {
 						"lang_tag": "temperature",
@@ -99,8 +94,6 @@
 				},
 				{
 					"ControlGroup": "2",
-					"ControlPair": "2",
-					"ControlHeader": "2",
 					"ControlType": "variable",
 					"Display": {
 						"Service": "urn:upnp-org:serviceId:TemperatureSensor1",
@@ -113,8 +106,6 @@
 				},
 				{
 					"ControlGroup": "2",
-					"ControlPair": "2",
-					"ControlHeader": "2",
 					"ControlType": "label",
 					"Label": {
 						"lang_tag": "dayssincebirth",
@@ -129,8 +120,6 @@
 				},
 				{
 					"ControlGroup": "2",
-					"ControlPair": "2",
-					"ControlHeader": "2",
 					"ControlType": "variable",
 					"Display": {
 						"Service": "urn:futzle-com:serviceId:CurrentCostEnviR1",
@@ -143,8 +132,6 @@
 				},
 				{
 					"ControlGroup": "2",
-					"ControlPair": "2",
-					"ControlHeader": "2",
 					"ControlType": "label",
 					"Label": {
 						"lang_tag": "time",
@@ -159,8 +146,6 @@
 				},
 				{
 					"ControlGroup": "2",
-					"ControlPair": "2",
-					"ControlHeader": "2",
 					"ControlType": "variable",
 					"Display": {
 						"Service": "urn:futzle-com:serviceId:CurrentCostEnviR1",
@@ -173,8 +158,6 @@
 				},
 				{
 					"ControlGroup": "2",
-					"ControlPair": "2",
-					"ControlHeader": "2",
 					"ControlType": "label",
 					"Label": {
 						"lang_tag": "version",
@@ -189,8 +172,6 @@
 				},
 				{
 					"ControlGroup": "2",
-					"ControlPair": "2",
-					"ControlHeader": "2",
 					"ControlType": "variable",
 					"Display": {
 						"Service": "urn:futzle-com:serviceId:CurrentCostEnviR1",
