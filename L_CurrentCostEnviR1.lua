@@ -8,6 +8,8 @@ ENERGY_SERVICE_ID = "urn:micasaverde-com:serviceId:EnergyMetering1"
 TEMPERATURE_SERVICE_ID = "urn:upnp-org:serviceId:TemperatureSensor1"
 -- Cache of child devices, maps appliance number to MiOS device ID.
 CHILD_DEVICE = { }
+-- Child device for temperature, if configured.
+CHILD_TEMPERATURE_DEVICE = nil
 -- History caches for each appliance, for three time scales.
 TWOHOURLY_HISTORY = { ["0"] = { }, ["1"] = { }, ["2"] = { }, ["3"] = { }, ["4"] = { }, ["5"] = { }, ["6"] = { }, ["7"] = { }, ["8"] = { }, ["9"] = { } }
 DAILY_HISTORY = { ["0"] = { }, ["1"] = { }, ["2"] = { }, ["3"] = { }, ["4"] = { }, ["5"] = { }, ["6"] = { }, ["7"] = { }, ["8"] = { }, ["9"] = { } }
@@ -39,6 +41,18 @@ function initialize(lul_device)
 				"D_CurrentCostEnviRAppliance1.xml", "", "", false)
 		end
 	end
+
+	-- Flag: create a child device for the temperature sensor in the console.
+	CREATE_CHILD_TEMPERATURE_DEVICE = luup.variable_get(SERVICE_ID, "ChildTemperature", lul_device)
+	if (CREATE_CHILD_TEMPERATURE_DEVICE == nil) then
+		luup.variable_set(SERVICE_ID, "ChildTemperature", "0", lul_device)
+	elseif (CREATE_CHILD_TEMPERATURE_DEVICE == "1") then
+		luup.chdev.append(lul_device, childDevices, "Temperature",
+			"CurrentCost EnviR", "urn:schemas-micasaverde-com:device:TemperatureSensor:1",
+			"D_TemperatureSensor1.xml", "", "", false)
+        end
+
+	-- All child devices created.
 	luup.chdev.sync(lul_device, childDevices)
 
 	-- Compute total power use for the parent device using this formula.
@@ -65,8 +79,8 @@ function initialize(lul_device)
 	end
 
 	-- Cache the child device ids, and populate the history variables.
-	for sensor = 0, 9 do
-		for k, v in pairs(luup.devices) do
+	for k, v in pairs(luup.devices) do
+		for sensor = 0, 9 do
 			if (v.device_num_parent == lul_device and v.id == "Appliance" .. sensor) then
 				if (DEBUG) then luup.log("Child deviceId for Appliance " .. sensor .. " is " .. k) end
 				CHILD_DEVICE[tostring(sensor)] = k
@@ -74,6 +88,9 @@ function initialize(lul_device)
 				DAILY_HISTORY[tostring(sensor)] = deserializeHistory(luup.variable_get(SERVICE_ID, "DailyHistory", k) or "")
 				MONTHLY_HISTORY[tostring(sensor)] = deserializeHistory(luup.variable_get(SERVICE_ID, "MonthlyHistory", k) or "")
 			end
+		end
+		if (v.device_num_parent == lul_device and v.id == "Temperature") then
+			CHILD_TEMPERATURE_DEVICE = k
 		end
 	end
 
@@ -127,7 +144,7 @@ end
 
 -- <uid> contains a pseudo-unique string for this EnviR.
 function processMsgUid(context, lul_device, uid)
-	context.version = uid
+	context.uid = uid
 	luup.variable_set(SERVICE_ID, "UID", uid, lul_device)
 	return context
 end
@@ -150,6 +167,10 @@ end
 function processMsgTmpr(context, lul_device, tmpr)
 	context.tmpr = tmpr
 	luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", tmpr, lul_device)
+	-- Set temperature on the child temperature device (if there is one).
+	if (CHILD_TEMPERATURE_DEVICE) then
+		luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", tmpr, CHILD_TEMPERATURE_DEVICE)
+	end
 	return context
 end
 
@@ -252,10 +273,8 @@ function processMsgContext(context, lul_device)
 			luup.variable_set(SERVICE_ID, "DaysSinceBirth", context.dsb, childDevice)
 			luup.variable_set(SERVICE_ID, "Time", context.time, childDevice)
 			luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, childDevice)
-			luup.variable_set(SERVICE_ID, "Version", context.version, childDevice)
-			luup.variable_set(SERVICE_ID, "UID", uid, childDevice)
-			luup.variable_set(SERVICE_ID, "DaysSinceBirth", tonumber(dsb), childDevice)
-			luup.variable_set(SERVICE_ID, "Time", time, childDevice)
+			if (context.version) then luup.variable_set(SERVICE_ID, "Version", context.version, childDevice) end
+			if (context.uid) then luup.variable_set(SERVICE_ID, "UID", context.uid, childDevice) end
 		end
 
 		-- Note this appliance number, if permitted.
