@@ -8,6 +8,7 @@ ENERGY_SERVICE_ID = "urn:micasaverde-com:serviceId:EnergyMetering1"
 TEMPERATURE_SERVICE_ID = "urn:upnp-org:serviceId:TemperatureSensor1"
 -- Cache of child devices, maps appliance number to MiOS device ID.
 CHILD_DEVICE = { }
+CHILD_DEVICE_THREEPHASE = { ["0"] = { }, ["1"] = { }, ["2"] = { }, ["3"] = { }, ["4"] = { }, ["5"] = { }, ["6"] = { }, ["7"] = { }, ["8"] = { }, ["9"] = { } }
 -- Child device for temperature, if configured.
 CHILD_TEMPERATURE_DEVICE = nil
 -- History caches for each appliance, for three time scales.
@@ -35,10 +36,17 @@ function initialize(lul_device)
 	-- restart in order to create child devices.
 	local childDevices = luup.chdev.start(lul_device)
 	for child = 0, 9 do
-		if (luup.variable_get(SERVICE_ID, "Appliance" .. tostring(child), lul_device) or "0" ~= "0") then
+		if ((luup.variable_get(SERVICE_ID, "Appliance" .. tostring(child), lul_device) or "0") ~= "0") then
 			luup.chdev.append(lul_device, childDevices, "Appliance" .. tostring(child),
 				"Appliance " .. child, "urn:schemas-futzle-com:device:CurrentCostEnvirAppliance:1",
 				"D_CurrentCostEnviRAppliance1.xml", "", "", false)
+		end
+		if ((luup.variable_get(SERVICE_ID, "Appliance" .. tostring(child) .. "ThreePhase", lul_device) or "0") ~= "0") then
+			for phase = 1, 3 do
+				luup.chdev.append(lul_device, childDevices, "Appliance" .. tostring(child) .. "Phase" .. tostring(phase),
+					"Appliance " .. child .. " phase " .. phase, "urn:schemas-futzle-com:device:CurrentCostEnvirAppliancePhase:1",
+					"D_CurrentCostEnviRAppliancePhase1.xml", "", "", false)
+			end
 		end
 	end
 
@@ -50,7 +58,7 @@ function initialize(lul_device)
 		luup.chdev.append(lul_device, childDevices, "Temperature",
 			"CurrentCost EnviR", "urn:schemas-micasaverde-com:device:TemperatureSensor:1",
 			"D_TemperatureSensor1.xml", "", "", false)
-        end
+	end
 
 	-- All child devices created.
 	luup.chdev.sync(lul_device, childDevices)
@@ -87,6 +95,12 @@ function initialize(lul_device)
 				TWOHOURLY_HISTORY[tostring(sensor)] = deserializeHistory(luup.variable_get(SERVICE_ID, "TwoHourlyHistory", k) or "")
 				DAILY_HISTORY[tostring(sensor)] = deserializeHistory(luup.variable_get(SERVICE_ID, "DailyHistory", k) or "")
 				MONTHLY_HISTORY[tostring(sensor)] = deserializeHistory(luup.variable_get(SERVICE_ID, "MonthlyHistory", k) or "")
+			end
+			for phase = 1, 3 do
+				if (v.device_num_parent == lul_device and v.id == "Appliance" .. sensor .. "Phase" .. phase) then
+					if (DEBUG) then luup.log("Child deviceId for Appliance " .. sensor .. " Phase " .. phase .. " is " .. k) end
+					CHILD_DEVICE_THREEPHASE[tostring(sensor)][tostring(phase)] = k
+				end
 			end
 		end
 		if (v.device_num_parent == lul_device and v.id == "Temperature") then
@@ -166,11 +180,13 @@ end
 -- <tmpr> is temperature in Celsius.
 function processMsgTmpr(context, lul_device, tmpr)
 	context.tmpr = tmpr
-	luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", tmpr, lul_device)
-	-- Set temperature on the child temperature device (if there is one).
-	if (CHILD_TEMPERATURE_DEVICE) then
-		luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", tmpr, CHILD_TEMPERATURE_DEVICE)
-	end
+	return context
+end
+
+-- <tmprF> is temperature in Fahrenheit.
+function processMsgTmprF(context, lul_device, tmprF)
+	-- Hack ahead.  Log it in Fahrenheit even though UPnP devices are supposed to be Celsius.
+	context.tmpr = tmpr
 	return context
 end
 
@@ -182,13 +198,27 @@ function processMsgSensor(context, lul_device, sensor)
 end
 
 -- <ch1>, <ch2>, <ch3> are phase wattages for type-1 transmitters.
-function processMsgChannel(context, lul_device, channelContent)
+function processMsgChannel(context, lul_device, channelContent, phase)
 	local matched, watts
 	matched, _, watts = channelContent:find("^<watts>(.-)</watts>$")
 	if (matched) then
 		context.watts = (context.watts or 0) + watts
+		if (context.phase == nil) then context.phase = { ["1"] = "0", ["2"] = "0", ["3"] = "0" } end
+		context.phase[phase] = tonumber(watts)
 	end
 	return context
+end
+
+function processMsgChannel1(context, lul_device, channelContent)
+	return processMsgChannel(context, lul_device, channelContent, "1")
+end
+
+function processMsgChannel2(context, lul_device, channelContent)
+	return processMsgChannel(context, lul_device, channelContent, "2")
+end
+
+function processMsgChannel3(context, lul_device, channelContent)
+	return processMsgChannel(context, lul_device, channelContent, "3")
 end
 
 -- 
@@ -252,10 +282,11 @@ XML_MSG_DISPATCH = {
 	dsb = processMsgDsb,
 	time = processMsgTime,
 	tmpr = processMsgTmpr,
+	tmprF = processMsgTmprF,
 	sensor = processMsgSensor,
-	ch1 = processMsgChannel,
-	ch2 = processMsgChannel,
-	ch3 = processMsgChannel,
+	ch1 = processMsgChannel1,
+	ch2 = processMsgChannel2,
+	ch3 = processMsgChannel3,
 	hist = processMsgHist,
 }
 
@@ -277,6 +308,19 @@ function processMsgContext(context, lul_device)
 			if (context.uid) then luup.variable_set(SERVICE_ID, "UID", context.uid, childDevice) end
 		end
 
+		-- Log three-phase power to separate devices, if asked.
+		for phase = 1, 3 do
+			local childDevicePhase = CHILD_DEVICE_THREEPHASE[context.sensor][tostring(phase)]
+			if (childDevicePhase ~= nil) then
+				luup.variable_set(ENERGY_SERVICE_ID, "Watts", context.phase[tostring(phase)], childDevicePhase)
+				luup.variable_set(SERVICE_ID, "DaysSinceBirth", context.dsb, childDevicePhase)
+				luup.variable_set(SERVICE_ID, "Time", context.time, childDevicePhase)
+				luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, childDevicePhase)
+				if (context.version) then luup.variable_set(SERVICE_ID, "Version", context.version, childDevicePhase) end
+				if (context.uid) then luup.variable_set(SERVICE_ID, "UID", context.uid, childDevicePhase) end
+			end
+		end
+
 		-- Note this appliance number, if permitted.
 		if (AUTO_DETECT or "0" ~= "0") then
 			luup.variable_set(SERVICE_ID, "Appliance" .. context.sensor, context.id, lul_device)
@@ -285,6 +329,14 @@ function processMsgContext(context, lul_device)
 		-- Compute parent device's reading, using its custom formula.
 		APPLIANCE_POWER[context.sensor] = context.watts
 		luup.variable_set(ENERGY_SERVICE_ID, "Watts", calculateFormula(APPLIANCE_POWER), lul_device)
+	end
+
+	if (context.tmpr) then
+		luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, lul_device)
+		-- Set temperature on the child temperature device (if there is one).
+		if (CHILD_TEMPERATURE_DEVICE) then
+			luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, CHILD_TEMPERATURE_DEVICE)
+		end
 	end
 end
 
@@ -349,7 +401,7 @@ function processPacket(lul_device, lul_data)
 		-- variables on the parent and child devices.
 		if (HISTORY_LAST_UPDATED and os.date("%s") - HISTORY_LAST_UPDATED > 25) then
 			if (DEBUG) then luup.log("Updating history") end
-			updateHistory(lul_device);
+			updateHistory(lul_device)
 			-- Go silent until the next history burst, 2ish hours from now.
 			HISTORY_LAST_UPDATED = nil
 		end
