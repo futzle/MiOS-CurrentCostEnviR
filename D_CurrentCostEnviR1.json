@@ -6,6 +6,7 @@
 	"imgIconMin": "",
 	"imgIconMax": "",
 	"halloIconsDir": "pics\/hallo",
+	"inScene": "0",
 	"DisplayStatus": {
 	},
 	"doc_url": {
@@ -23,21 +24,29 @@
 			},
 			"Position": "0",
 			"TabType": "flash",
+			"SceneGroup": [
+				{
+					"id": "1",
+					"top": "1",
+					"left": "0",
+					"x": "2",
+					"y": "1"
+				}
+			],
 			"ControlGroup": [
 				{
 					"id": "1",
-					"type": "info"
-				},
-				{
-					"id": "2",
-					"type": "info"
+					"type": "info",
+					"scenegroup": "1"
 				}
 			],
 			"Control": [
 				{
 					"ControlGroup": "1",
+					"ControlPair": "1",
 					"ControlHeader": "1",
 					"ControlType": "label",
+					"left": 0,
 					"Label": {
 						"lang_tag": "power",
 						"text": "Power:"
@@ -51,8 +60,10 @@
 				},
 				{
 					"ControlGroup": "1",
+					"ControlPair": "1",
 					"ControlHeader": "1",
 					"ControlType": "variable",
+					"left": 0.5,
 					"Display": {
 						"Service": "urn:micasaverde-com:serviceId:EnergyMetering1",
 						"Variable": "Watts",
@@ -64,22 +75,23 @@
 				},
 				{
 					"ControlGroup":"1",
+					"ControlPair":"1",
 					"ControlHeader":"1",
 					"ControlType": "label",
+					"left": 0.8,
 					"Label": {
 						"lang_tag": "watts",
 						"text": "W"
 					},
 					"Display": {
 						"Top": 60,
-						"Left": 170,
+						"Left": 180,
 						"Width": 75,
 						"Height": 20
 					}
 				},
 
 				{
-					"ControlGroup": "2",
 					"ControlType": "label",
 					"Label": {
 						"lang_tag": "temperature",
@@ -93,7 +105,6 @@
 					}
 				},
 				{
-					"ControlGroup": "2",
 					"ControlType": "variable",
 					"Display": {
 						"Service": "urn:upnp-org:serviceId:TemperatureSensor1",
@@ -105,7 +116,6 @@
 					}
 				},
 				{
-					"ControlGroup": "2",
 					"ControlType": "label",
 					"Label": {
 						"lang_tag": "dayssincebirth",
@@ -119,7 +129,6 @@
 					}
 				},
 				{
-					"ControlGroup": "2",
 					"ControlType": "variable",
 					"Display": {
 						"Service": "urn:futzle-com:serviceId:CurrentCostEnviR1",
@@ -131,7 +140,6 @@
 					}
 				},
 				{
-					"ControlGroup": "2",
 					"ControlType": "label",
 					"Label": {
 						"lang_tag": "time",
@@ -145,7 +153,6 @@
 					}
 				},
 				{
-					"ControlGroup": "2",
 					"ControlType": "variable",
 					"Display": {
 						"Service": "urn:futzle-com:serviceId:CurrentCostEnviR1",
@@ -157,7 +164,6 @@
 					}
 				},
 				{
-					"ControlGroup": "2",
 					"ControlType": "label",
 					"Label": {
 						"lang_tag": "version",
@@ -171,7 +177,6 @@
 					}
 				},
 				{
-					"ControlGroup": "2",
 					"ControlType": "variable",
 					"Display": {
 						"Service": "urn:futzle-com:serviceId:CurrentCostEnviR1",
@@ -283,5 +288,117 @@
 			}
 		}
 	},
+	"eventList2": [
+		{
+			"id": 1,
+			"label": {
+				"lang_tag": "energy_usage_goes_above",
+				"text": "Energy usage goes above"
+			},
+			"serviceId": "urn:micasaverde-com:serviceId:EnergyMetering1",
+			"norepeat": "1",
+			"argumentList" : [
+				{
+					"id": 1,
+					"dataType": "i4",
+					"name": "Watts",
+					"comparisson": ">",
+					"prefix": {
+						"lang_tag": "watts",
+						"text": "Watts: "
+					},
+					"suffix": {},
+					"HumanFriendlyText": {
+						"lang_tag": "hft_energy_usage_goes_above",
+						"text": "_DEVICE_NAME_: Energy usage goes above _ARGUMENT_VALUE_ watts"
+					}
+				}
+			]
+		},
+		{
+			"id": 2,
+			"label": {
+				"lang_tag": "energy_usage_goes_below",
+				"text": "Energy usage goes below"
+			},
+			"serviceId": "urn:micasaverde-com:serviceId:EnergyMetering1",
+			"norepeat": "1",
+			"argumentList" : [
+				{
+					"id": 1,
+					"dataType": "i4",
+					"name": "Watts",
+					"comparisson": "<",
+					"prefix": {
+						"lang_tag": "watts",
+						"text": "Watts: "
+					},
+					"suffix": {},
+					"HumanFriendlyText": {
+						"lang_tag": "hft_energy_usage_goes_below",
+						"text": "_DEVICE_NAME_: Energy usage goes below _ARGUMENT_VALUE_ watts"
+					}
+				}
+			]
+		},
+		{
+			"id": 3,
+			"label": {
+				"lang_tag": "temperature_goes_above",
+				"text": "Temperature goes above"
+			},
+			"serviceId": "urn:upnp-org:serviceId:TemperatureSensor1",
+			"norepeat": "1",
+			"argumentList": [
+				{
+					"id": 1,
+					"dataType": "i4",
+					"name": "CurrentTemperature",
+					"comparisson": ">",
+					"prefix": {
+						"lang_tag": "",
+						"text": "Temperature: "
+					},
+					"suffix": {
+						"lang_tag": "degrees",
+						"text": " degrees"
+					},
+					"HumanFriendlyText": {
+						"lang_tag": "hft_temperature_goes_above",
+						"text": "_DEVICE_NAME_: Temperature goes above _ARGUMENT_VALUE_ degrees"
+					}
+				}
+			]
+		},
+		{
+			"id": 4,
+			"label": {
+				"lang_tag": "temperature_goes_below",
+				"text": "Temperature goes below"
+			},
+			"serviceId": "urn:upnp-org:serviceId:TemperatureSensor1",
+			"norepeat": "1",
+			"argumentList" : [
+				{
+					"id": 1,
+					"dataType": "i4",
+					"name": "CurrentTemperature",
+					"comparisson": "<",
+					"prefix": {
+						"lang_tag": "",
+						"text": "Temperature: "
+					},
+					"suffix": {
+						"lang_tag": "degrees",
+						"text": " degrees"
+					},
+					"HumanFriendlyText": {
+						"lang_tag": "hft_temperature_goes_below",
+						"text": "_DEVICE_NAME_: Temperature goes below _ARGUMENT_VALUE_ degrees"
+					}
+				}
+			]
+		}
+	],
 	"DeviceType": "urn:schemas-futzle-com:device:CurrentCostEnviR:1"
 }
