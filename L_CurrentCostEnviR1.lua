@@ -186,7 +186,7 @@ end
 -- <tmprF> is temperature in Fahrenheit.
 function processMsgTmprF(context, lul_device, tmprF)
 	-- Hack ahead.  Log it in Fahrenheit even though UPnP devices are supposed to be Celsius.
-	context.tmpr = tmpr
+	context.tmpr = tmprF
 	return context
 end
 
