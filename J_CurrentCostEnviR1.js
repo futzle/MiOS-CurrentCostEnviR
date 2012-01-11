@@ -266,7 +266,11 @@ function onHistoryDropdownChange(selection, imageId, f, deviceId, width, height)
 function showHistory(deviceId)
 {
 	var historyUpdateTimestamp = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "HistoryUpdateTimestamp", 1);
-	if (historyUpdateTimestamp == undefined) { return false; }
+	if (historyUpdateTimestamp == undefined)
+	{
+		set_panel_html("<p>History takes up to three hours to populate.</p>");
+		return false;
+	}
 	var today = new Date((historyUpdateTimestamp - 0) * 1000);
 
 	var width = 540;
