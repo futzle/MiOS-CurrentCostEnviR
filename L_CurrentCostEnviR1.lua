@@ -21,10 +21,31 @@ MONTHLY_HISTORY = { ["0"] = { }, ["1"] = { }, ["2"] = { }, ["3"] = { }, ["4"] = 
 HISTORY_LAST_UPDATED = nil
 -- Print lots of useless debugging information to the Luup log.
 DEBUG = false
+-- Report child discovery if first run.
+CHILD_DEVICE_COUNT = 0
+CHILD_DEVICE_DISCOVERY_HANDLE = nil
 
 -- Run once at Luup engine startup.
 function initialize(lul_device)
 	luup.log("Initializing CurrentCost EnviR")
+
+	-- Run from serial device (including IPSerial) or open a socket? 
+	local ioDevice = luup.variable_get("urn:micasaverde-com:serviceId:HaDevice1", "IODevice", lul_device)
+	local useSocket = false
+	if (ioDevice == nil or ioDevice == "") then useSocket = true end
+	if (useSocket) then
+		local ip = luup.devices[lul_device].ip
+		local ipv4, tcpport = ip:match("(%d+%.%d+%.%d+%.%d+):(%d+)")
+		if (ipv4 ~= nil and tcpport ~= nil) then
+			luup.log(string.format("Opening socket to %s port %s", ipv4, tcpport))
+			luup.io.open(lul_device, ipv4, tcpport)
+		else
+			luup.log("No serial device specified; exiting")
+			return false, "No serial device specified. Visit the Connection tab and choose how the device is attached.", string.format("%s[%d]", luup.devices[lul_device].description, lul_device)
+		end
+	else
+		luup.log("Opening serial port")
+	end
 
 	-- Help prevent race condition
 	luup.io.intercept()
@@ -37,6 +58,7 @@ function initialize(lul_device)
 	local childDevices = luup.chdev.start(lul_device)
 	for child = 0, 9 do
 		if ((luup.variable_get(SERVICE_ID, "Appliance" .. tostring(child), lul_device) or "0") ~= "0") then
+			CHILD_DEVICE_COUNT = CHILD_DEVICE_COUNT + 1
 			luup.chdev.append(lul_device, childDevices, "Appliance" .. tostring(child),
 				"Appliance " .. child, "urn:schemas-futzle-com:device:CurrentCostEnvirAppliance:1",
 				"D_CurrentCostEnviRAppliance1.xml", "", "", false)
@@ -108,7 +130,13 @@ function initialize(lul_device)
 		end
 	end
 
+	-- Notify if there are no child devices.
+	if (CHILD_DEVICE_COUNT == 0) then
+		CHILD_DEVICE_DISCOVERY_HANDLE = luup.task("Waiting to discover appliances", 1, string.format("%s[%d]", luup.devices[lul_device].description, lul_device), -1)
+	end
+
 	-- Startup is done.
+	return true
 end
 
 -- Compute parent device's display.
@@ -323,7 +351,15 @@ function processMsgContext(context, lul_device)
 
 		-- Note this appliance number, if permitted.
 		if (AUTO_DETECT or "0" ~= "0") then
-			luup.variable_set(SERVICE_ID, "Appliance" .. context.sensor, context.id, lul_device)
+			local previousId = luup.variable_get(SERVICE_ID, "Appliance" .. context.sensor, lul_device)
+			if (previousId == nil or context.id ~= previousId) then
+				luup.variable_set(SERVICE_ID, "Appliance" .. context.sensor, context.id, lul_device)
+				CHILD_DEVICE_COUNT = CHILD_DEVICE_COUNT + 1
+				-- Did we start with zero appliances?  Tell user we found another.
+				if (CHILD_DEVICE_DISCOVERY_HANDLE ~= nil) then
+					luup.task("Discovered " .. CHILD_DEVICE_COUNT .. (CHILD_DEVICE_COUNT == 1 and " appliance" or " appliances") .. ". Reload when all appliances are discovered", 1, string.format("%s[%d]", luup.devices[lul_device].description, lul_device), CHILD_DEVICE_DISCOVERY_HANDLE)
+				end
+			end
 		end
 
 		-- Compute parent device's reading, using its custom formula.

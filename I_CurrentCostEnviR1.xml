@@ -11,7 +11,7 @@ function initialize (lul_device)
 	end
 	package.loaded.L_CurrentCostEnviR1 = nil
 	cc_plugin = require ("L_CurrentCostEnviR1")
-	cc_plugin.initialize (lul_device)
+	return cc_plugin.initialize (lul_device)
 end
 	</functions>
 	<startup>initialize</startup>
