@@ -1,3 +1,83 @@
+/* Get the name of the child device for a given appliance. */
+function getChildApplianceName(deviceId, a)
+{
+	var matches = jsonp.ud.devices.findAll(function(d) {
+		return d.altid == "Appliance" + a && d.id_parent == deviceId
+	} );
+	if (matches.length > 0) { return matches[0].name; }
+	return undefined;
+}
+
+/* Entry point for "Configuration" tab.
+   Provide GUI for editing global and per-appliance settings. */
+function setup(deviceId)
+{
+	var htmlResult = "";
+	htmlResult += "<div>";
+	htmlResult += "<table border='0' padding='0' width='100%'>";
+	htmlResult += "<tr>";
+
+	// Child temperature device (default off)
+	htmlResult += "<td>Create a child device with console temperature</td>";
+	var childTemperature = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "ChildTemperature", 0);
+	if (childTemperature == undefined) childTemperature = 0;
+	htmlResult += "<td><input type='checkbox' id='childTemperature' " + (childTemperature == "1" ? "checked='checked' " : "") + "onclick='set_device_state(" + deviceId + ", \"urn:futzle-com:serviceId:CurrentCostEnviR1\", \"ChildTemperature\", $F(\"childTemperature\") ? 1 : 0, 0)'/></td>";
+
+	htmlResult += "</tr><tr>";
+
+	// Autodetect appliances (default on)
+	htmlResult += "<td>Automatically create child devices for appliances</td>";
+	var applianceDetect = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "ApplianceAutoDetect", 0);
+	if (applianceDetect == undefined) applianceDetect = 1;
+	htmlResult += "<td><input type='checkbox' id='applianceDetect' " + (applianceDetect == "1" ? "checked='checked' " : "") + "onclick='set_device_state(" + deviceId + ", \"urn:futzle-com:serviceId:CurrentCostEnviR1\", \"ApplianceAutoDetect\", $F(\"applianceDetect\") ? 1 : 0, 0)'/></td>";
+
+	htmlResult += "</tr>";
+	htmlResult += "</table>";
+
+	// Child device configuration.
+	htmlResult += "<table border='0' padding='0' width='100%'>";
+	htmlResult += "<tr>";
+	htmlResult += "<th>Appliance</th><th>ID</th><th>Name</th><th>Separate Phases</th><th>Main power</th>";
+	htmlResult += "</tr>";
+
+	var formula = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "Formula", 0);
+	if (formula == undefined) formula = "";
+	if (/^[0-9]/.test(formula)) formula = "+" + formula;
+	var a;
+	for (a = 0; a < 10; a++)
+	{
+		var applianceId = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "Appliance" + a, 0);
+		if (applianceId == undefined || applianceId == "" || applianceId == "0") continue;
+		htmlResult += "<tr>";
+		// Appliance number
+		htmlResult += "<td>" + a + (a == 0 ? " (whole house)" : "") + "</td>";
+		// Appliance unique identifier
+		htmlResult += "<td>" + applianceId.escapeHTML() + "</td>";
+		// Appliance name as set by the user
+		var applianceName = getChildApplianceName(deviceId, a);
+		htmlResult += "<td>" + applianceName + "</td>";
+		// Create additional child devices for each phase?
+		var applianceThreePhase = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "Appliance" + a + "ThreePhase", 0);
+		if (applianceThreePhase == undefined) applianceThreePhase = 0;
+		htmlResult += "<td><input type='checkbox' " + (applianceThreePhase == "1" ? "checked='checked' " : "") + "/></td>";
+		// How does the child's energy contribute to the main device's energy (+ or -)?
+		htmlResult += "<td>"
+		htmlResult += "<select>";
+		htmlResult += "<option value='none' " + (formula.indexOf("+" + a) == -1 && formula.indexOf("-" + a) == -1 ? "selected='selected' " : "")  + ">None</option>";
+		htmlResult += "<option value='add' " + (formula.indexOf("+" + a) != -1 ? "selected='selected' " : "")  + ">Add</option>";
+		htmlResult += "<option value='subtract' " + (formula.indexOf("-" + a) != -1 ? "selected='selected' " : "")  + ">Subtract</option>";
+		htmlResult += "</select>";
+		htmlResult += "</td>";
+		htmlResult += "</tr>";
+	}
+
+	htmlResult += "</table>";
+
+	htmlResult += "</div>";
+	set_panel_html(htmlResult);
+	return true;
+}
+
 /* Create an associative array from a serialized history string
    in key/value pairs of the form 001=123.45;002=6789; */
 function deserializeHistory(s)

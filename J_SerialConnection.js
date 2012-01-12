@@ -132,6 +132,7 @@ function setSerialDevice(deviceId, serialDeviceId)
 {
   enableSelectedOption(deviceId,"ioDevice");
   set_device_state(deviceId, "urn:micasaverde-com:serviceId:HaDevice1", "IODevice", serialDeviceId, 0);
+  jsonp.get_device_by_id(deviceId).ip = "";
 }
 
 /* Set the ip special variable, when
@@ -204,7 +205,7 @@ function serialConnection(deviceId)
   htmlResult += "<p style='margin-left: 4em;'>IP address <input id='ipaddress' type='text' size='16' value='" + ipAddress.escapeHTML() + "' onchange='setIPDevice(" + deviceId + ",$F(ipaddress),$F(tcpport))' />";
   var tcpPort = getTcpPort(deviceId);
   if (tcpPort == undefined) { tcpPort = ""; }
-  htmlResult += " TCP port <input id='tcpport' type='text' size='6' value='" + tcpPort.escapeHTML() + "' onchange='setIPDevice(" + deviceId + ",$(ipaddress),$(tcpport))' /></p> ";
+  htmlResult += " TCP port <input id='tcpport' type='text' size='6' value='" + tcpPort.escapeHTML() + "' onchange='setIPDevice(" + deviceId + ",$F(ipaddress),$F(tcpport))' /></p> ";
   htmlResult += "</p>";
 
   htmlResult += "</form>";
