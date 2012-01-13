@@ -8,6 +8,29 @@ function getChildApplianceName(deviceId, a)
 	return undefined;
 }
 
+function getFormula(deviceId)
+{
+	var formula = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "Formula", 0);
+	if (formula == undefined) formula = "";
+	if (/^[0-9]/.test(formula)) formula = "+" + formula;
+	return formula;
+}
+
+function setFormula(deviceId, a, operation)
+{
+	var formula = getFormula(deviceId);
+	formula = formula.replace("-" + a, "").replace("+" + a, "");
+	if (operation == "add")
+	{
+		formula += "+" + a;
+	}
+	else if (operation == "subtract")
+	{
+		formula += "-" + a;
+	}
+	set_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "Formula", formula, 0);
+}
+
 /* Entry point for "Configuration" tab.
    Provide GUI for editing global and per-appliance settings. */
 function setup(deviceId)
@@ -40,9 +63,7 @@ function setup(deviceId)
 	htmlResult += "<th>Appliance</th><th>ID</th><th>Name</th><th>Separate Phases</th><th>Main power</th>";
 	htmlResult += "</tr>";
 
-	var formula = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "Formula", 0);
-	if (formula == undefined) formula = "";
-	if (/^[0-9]/.test(formula)) formula = "+" + formula;
+	var formula = getFormula(deviceId);
 	var a;
 	for (a = 0; a < 10; a++)
 	{
@@ -59,13 +80,13 @@ function setup(deviceId)
 		// Create additional child devices for each phase?
 		var applianceThreePhase = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "Appliance" + a + "ThreePhase", 0);
 		if (applianceThreePhase == undefined) applianceThreePhase = 0;
-		htmlResult += "<td><input type='checkbox' " + (applianceThreePhase == "1" ? "checked='checked' " : "") + "/></td>";
+		htmlResult += "<td><input type='checkbox' id='appliance" + a + "ThreePhase' " + (applianceThreePhase == "1" ? "checked='checked' " : "") + "onclick='set_device_state(" + deviceId + ", \"urn:futzle-com:serviceId:CurrentCostEnviR1\", \"Appliance" + a + "ThreePhase\", $F(\"appliance" + a + "ThreePhase\") ? 1 : 0, 0)'/></td>";
 		// How does the child's energy contribute to the main device's energy (+ or -)?
 		htmlResult += "<td>"
-		htmlResult += "<select>";
-		htmlResult += "<option value='none' " + (formula.indexOf("+" + a) == -1 && formula.indexOf("-" + a) == -1 ? "selected='selected' " : "")  + ">None</option>";
-		htmlResult += "<option value='add' " + (formula.indexOf("+" + a) != -1 ? "selected='selected' " : "")  + ">Add</option>";
-		htmlResult += "<option value='subtract' " + (formula.indexOf("-" + a) != -1 ? "selected='selected' " : "")  + ">Subtract</option>";
+		htmlResult += "<select id='formula" + a + "' onchange='setFormula(" + deviceId + "," + a + ",$F(\"formula" + a + "\"))'>";
+		htmlResult += "<option value='none' " + (formula.indexOf("+" + a) == -1 && formula.indexOf("-" + a) == -1 ? "selected='selected' " : "") + ">None</option>";
+		htmlResult += "<option value='add' " + (formula.indexOf("+" + a) != -1 ? "selected='selected' " : "") + ">Add</option>";
+		htmlResult += "<option value='subtract' " + (formula.indexOf("-" + a) != -1 ? "selected='selected' " : "") + ">Subtract</option>";
 		htmlResult += "</select>";
 		htmlResult += "</td>";
 		htmlResult += "</tr>";
