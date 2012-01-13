@@ -350,7 +350,7 @@ function processMsgContext(context, lul_device)
 		end
 
 		-- Note this appliance number, if permitted.
-		if (AUTO_DETECT or "0" ~= "0") then
+		if (AUTO_DETECT or "1" ~= "0") then
 			local previousId = luup.variable_get(SERVICE_ID, "Appliance" .. context.sensor, lul_device)
 			if (previousId == nil or context.id ~= previousId) then
 				luup.variable_set(SERVICE_ID, "Appliance" .. context.sensor, context.id, lul_device)
