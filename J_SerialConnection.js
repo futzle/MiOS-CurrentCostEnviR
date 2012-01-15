@@ -169,7 +169,7 @@ function setSerialProperties(deviceId, serialDeviceId)
    or when the two text fields change. */
 function setIPDevice(deviceId, ipAddress, tcpPort)
 {
-  if (tcpPort == undefined || tcpPort == "")
+  if ($('tcpport').disabled || tcpPort == undefined || tcpPort == "")
   {
     jsonp.get_device_by_id(deviceId).ip = ipAddress;
   }
@@ -179,6 +179,40 @@ function setIPDevice(deviceId, ipAddress, tcpPort)
   }
   set_device_state(deviceId, "urn:micasaverde-com:serviceId:HaDevice1", "IODevice", "", 0);
   enableSelectedOption(deviceId, "ip", undefined);
+}
+
+/* Fetch the named file over Ajax and execute function
+   f() on the resulting XML. */
+function withUpnpFileName(deviceId, filename, f)
+{
+  new Ajax.Request("../port_3480/" + filename, {
+    onSuccess : function(response) {
+        return f(response.responseXML);
+      }
+    }
+  );
+}
+
+/* Fetch the Implementation file (I_*.xml) and
+   execute the function f() on the resulting XML. */
+function withImplementationFile(deviceId, f)
+{
+  var device = jsonp.get_device_by_id(deviceId);
+  if (device.impl_file != "")
+  {
+    return withUpnpFileName(deviceId, device.impl_file, f);
+  }
+  else
+  {
+    return withUpnpFileName(deviceId, device.device_file, function(doc) {
+      var implementationElement = doc.querySelector("root > device > implementationList > implementationFile");
+      if (implementationElement != undefined)
+      {
+        var implementationFile = implementationElement.textContent.trim();
+        return withUpnpFileName(deviceId, implementationFile, f);
+      }
+    });
+  }
 }
 
 /* Entry point.  This function sets the HTML for the tab. */
@@ -250,4 +284,15 @@ function serialConnection(deviceId)
   set_panel_html(htmlResult);
 
   enableSelectedOption(deviceId, currentConnectionType, ownedSerialDeviceId);
+
+  /* See if this device has an <ioPort> element.
+     If so, don't let user edit the TCP port. */
+  withImplementationFile(deviceId, function(doc) {
+    var ioPortElement = doc.querySelector("implementation > settings > ioPort");
+    if (ioPortElement != undefined)
+    {
+      var ioPortHardcoded = ioPortElement.textContent.trim();
+      $('tcpport').setValue(ioPortHardcoded).disable();
+    }
+  });
 }
