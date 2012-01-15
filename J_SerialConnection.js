@@ -26,7 +26,8 @@
  *      on the specified port should be opened using luup.io.open().
  *      If set and of the form "1.1.1.1", this means that the TCP port is a "default"
  *      value, which may mean something useful or not, depending on the plugin.
- *      Use luup.io.open() or signal an error.
+ *      If your plugin's implementation uses <ioPort> then Luup may open a
+ *      connection for you anyway.  Use luup.io.open(), do nothing, or signal an error.
  *      Other forms are reserved (for IPv6 or named hosts).
  *    - If neither is set, return false from the startup to signal an error.
  *
@@ -108,15 +109,34 @@ function getTcpPort(deviceId)
 }
 
 /* Mess with the DOM to disable parts of the UI. */
-function enableSelectedOption(deviceId, currentConnectionType)
+function enableSelectedOption(deviceId, currentConnectionType, ownedSerialDeviceId)
 {
   $('serialDevice').disable();
+  $('serialSpeed').disable();
+  $('serialData').disable();
+  $('serialParity').disable();
+  $('serialStop').disable();
   $('ipaddress').disable();
   $('tcpport').disable();
 
   if (currentConnectionType == "ioDevice")
   {
     $('serialDevice').enable();
+    if (ownedSerialDeviceId != undefined && ownedSerialDeviceId != "")
+    {
+      var serialSpeed = jsonp.get_lu_device_variable_value(ownedSerialDeviceId, "urn:micasaverde-org:serviceId:SerialPort1", "baud", 0);
+      if (serialSpeed == undefined || serialSpeed == "") serialSpeed = "9600";  // Default
+      $('serialSpeed').setValue(serialSpeed).enable();
+      var serialData = jsonp.get_lu_device_variable_value(ownedSerialDeviceId, "urn:micasaverde-org:serviceId:SerialPort1", "databits", 0);
+      if (serialData == undefined || serialData == "") serialData = "8";  // Default
+      $('serialData').setValue(serialData).enable();
+      var serialParity = jsonp.get_lu_device_variable_value(ownedSerialDeviceId, "urn:micasaverde-org:serviceId:SerialPort1", "parity", 0);
+      if (serialParity == undefined || serialParity == "") serialParity = "none";  // Default
+      $('serialParity').setValue(serialParity).enable();
+      var serialStop = jsonp.get_lu_device_variable_value(ownedSerialDeviceId, "urn:micasaverde-org:serviceId:SerialPort1", "stopbits", 0);
+      if (serialStop == undefined || serialStop == "") serialStop = "1";  // Default
+      $('serialStop').setValue(serialStop).enable();
+    }
   }
   if (currentConnectionType == "ip")
   {
@@ -130,9 +150,18 @@ function enableSelectedOption(deviceId, currentConnectionType)
    or when the dropdown changes. */
 function setSerialDevice(deviceId, serialDeviceId)
 {
-  enableSelectedOption(deviceId,"ioDevice");
   set_device_state(deviceId, "urn:micasaverde-com:serviceId:HaDevice1", "IODevice", serialDeviceId, 0);
   jsonp.get_device_by_id(deviceId).ip = "";
+  enableSelectedOption(deviceId, "ioDevice", serialDeviceId);
+}
+
+/* Set the IODevice serial properties (speed, parity, etc.). */
+function setSerialProperties(deviceId, serialDeviceId)
+{
+  set_device_state(serialDeviceId, "urn:micasaverde-org:serviceId:SerialPort1", "baud", $F('serialSpeed'), 0);
+  set_device_state(serialDeviceId, "urn:micasaverde-org:serviceId:SerialPort1", "databits", $F('serialData'), 0);
+  set_device_state(serialDeviceId, "urn:micasaverde-org:serviceId:SerialPort1", "parity", $F('serialParity'), 0);
+  set_device_state(serialDeviceId, "urn:micasaverde-org:serviceId:SerialPort1", "stopbits", $F('serialStop'), 0);
 }
 
 /* Set the ip special variable, when
@@ -140,7 +169,6 @@ function setSerialDevice(deviceId, serialDeviceId)
    or when the two text fields change. */
 function setIPDevice(deviceId, ipAddress, tcpPort)
 {
-  enableSelectedOption(deviceId,"ip");
   if (tcpPort == undefined || tcpPort == "")
   {
     jsonp.get_device_by_id(deviceId).ip = ipAddress;
@@ -150,6 +178,7 @@ function setIPDevice(deviceId, ipAddress, tcpPort)
     jsonp.get_device_by_id(deviceId).ip = ipAddress + ":" + tcpPort;
   }
   set_device_state(deviceId, "urn:micasaverde-com:serviceId:HaDevice1", "IODevice", "", 0);
+  enableSelectedOption(deviceId, "ip", undefined);
 }
 
 /* Entry point.  This function sets the HTML for the tab. */
@@ -168,6 +197,7 @@ function serialConnection(deviceId)
   htmlResult += "<select id='serialDevice' onchange='setSerialDevice(" + deviceId + ",$F(serialDevice))'>";
   htmlResult += "<option value=''>None</option>";
   var serialDevices = getSerialDevices(deviceId);
+  var ownedSerialDeviceId;
   htmlResult += serialDevices.inject("", function(htmlResult, d) {
     htmlResult += "<option value='" + d.id + "'";
     var deviceOwner = getDeviceOfSerialDevice(d.id);
@@ -177,6 +207,7 @@ function serialConnection(deviceId)
       {
         // This is my serial device.
         htmlResult += " selected='selected'";
+        ownedSerialDeviceId = d.id;
       }
       else
       {
@@ -195,6 +226,12 @@ function serialConnection(deviceId)
   });
   htmlResult += "</select>";
   htmlResult += "</p>";
+  htmlResult += "<p style='margin-left: 4em;'>";
+  htmlResult += "Speed <select id='serialSpeed' onchange='setSerialProperties(" + deviceId + ",$F(serialDevice))'><option value='300'>300</option><option value='1200'>1200</option><option value='2400'>2400</option><option value='4800'>4800</option><option value='9600'>9600</option><option value='19200'>19200</option><option value='38400'>38400</option><option value='57600'>57600</option><option value='115200'>115200</option><option value='230400'>230400</option></select>";
+  htmlResult += " Data bits <select id='serialData' onchange='setSerialProperties(" + deviceId + ",$F(serialDevice))'><option value='7'>7</option><option value='8'>8</option></select>";
+  htmlResult += " Parity <select id='serialParity' onchange='setSerialProperties(" + deviceId + ",$F(serialDevice))'><option value='none'>None</option><option value='even'>Even</option><option value='odd'>Odd</option></select>";
+  htmlResult += " Stop bits <select id='serialStop' onchange='setSerialProperties(" + deviceId + ",$F(serialDevice))'><option value='0'>0</option><option value='1'>1</option><option value='2'>2</option></select>";
+  htmlResult += "</p>";
 
   /* Serial proxy over Ethernet. */
   htmlResult += "<p><input type='radio' name='connectionType' value='ip' ";
@@ -212,5 +249,5 @@ function serialConnection(deviceId)
   htmlResult += "</div>";
   set_panel_html(htmlResult);
 
-  enableSelectedOption(deviceId, currentConnectionType);
+  enableSelectedOption(deviceId, currentConnectionType, ownedSerialDeviceId);
 }
