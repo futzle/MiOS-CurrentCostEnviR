@@ -108,11 +108,16 @@ function initialize(lul_device)
 		luup.variable_set(SERVICE_ID, "ApplianceAutoDetect", "1", lul_device)
 	end
 
+	-- Set the device category. 21 is "power meter".
+	luup.attr_set("category_num", 21, lul_device)
+
 	-- Cache the child device ids, and populate the history variables.
 	for k, v in pairs(luup.devices) do
 		for sensor = 0, 9 do
 			if (v.device_num_parent == lul_device and v.id == "Appliance" .. sensor) then
 				if (DEBUG) then luup.log("Child deviceId for Appliance " .. sensor .. " is " .. k) end
+				-- Set the device category. 21 is "power meter".
+				luup.attr_set("category_num", 21, k)
 				CHILD_DEVICE[tostring(sensor)] = k
 				TWOHOURLY_HISTORY[tostring(sensor)] = deserializeHistory(luup.variable_get(SERVICE_ID, "TwoHourlyHistory", k) or "")
 				DAILY_HISTORY[tostring(sensor)] = deserializeHistory(luup.variable_get(SERVICE_ID, "DailyHistory", k) or "")
@@ -121,11 +126,15 @@ function initialize(lul_device)
 			for phase = 1, 3 do
 				if (v.device_num_parent == lul_device and v.id == "Appliance" .. sensor .. "Phase" .. phase) then
 					if (DEBUG) then luup.log("Child deviceId for Appliance " .. sensor .. " Phase " .. phase .. " is " .. k) end
+					-- Set the device category. 21 is "power meter".
+					luup.attr_set("category_num", 21, k)
 					CHILD_DEVICE_THREEPHASE[tostring(sensor)][tostring(phase)] = k
 				end
 			end
 		end
 		if (v.device_num_parent == lul_device and v.id == "Temperature") then
+			-- Set the device category. 17 is "temperature".
+			luup.attr_set("category_num", 17, k)
 			CHILD_TEMPERATURE_DEVICE = k
 		end
 	end
