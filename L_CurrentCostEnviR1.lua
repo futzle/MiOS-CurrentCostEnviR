@@ -8,6 +8,7 @@ ENERGY_SERVICE_ID = "urn:micasaverde-com:serviceId:EnergyMetering1"
 TEMPERATURE_SERVICE_ID = "urn:upnp-org:serviceId:TemperatureSensor1"
 -- Cache of child devices, maps appliance number to MiOS device ID.
 CHILD_DEVICE = { }
+CHILD_DEVICE_TYPE = { }
 CHILD_DEVICE_THREEPHASE = { ["0"] = { }, ["1"] = { }, ["2"] = { }, ["3"] = { }, ["4"] = { }, ["5"] = { }, ["6"] = { }, ["7"] = { }, ["8"] = { }, ["9"] = { } }
 -- Child device for temperature, if configured.
 CHILD_TEMPERATURE_DEVICE = nil
@@ -59,9 +60,19 @@ function initialize(lul_device)
 	for child = 0, 9 do
 		if ((luup.variable_get(SERVICE_ID, "Appliance" .. tostring(child), lul_device) or "0") ~= "0") then
 			CHILD_DEVICE_COUNT = CHILD_DEVICE_COUNT + 1
-			luup.chdev.append(lul_device, childDevices, "Appliance" .. tostring(child),
-				"Appliance " .. child, "urn:schemas-futzle-com:device:CurrentCostEnvirAppliance:1",
-				"D_CurrentCostEnviRAppliance1.xml", "", "", false)
+			-- What type of device is it?
+			local deviceType = luup.variable_get(SERVICE_ID, "Appliance" .. tostring(child) .. "Type", lul_device) or "1"
+			if (deviceType == "1") then
+				-- Electricity power (clamp, individual monitor).
+				luup.chdev.append(lul_device, childDevices, "Appliance" .. tostring(child),
+					"Appliance " .. child, "urn:schemas-futzle-com:device:CurrentCostEnvirAppliance:1",
+					"D_CurrentCostEnviRAppliance1.xml", "", "", false)
+			elseif (deviceType == "2") then
+				-- Impulse meter (OptiSmart).
+				luup.chdev.append(lul_device, childDevices, "Appliance" .. tostring(child),
+					"Appliance " .. child .. " (pulse)", "urn:schemas-futzle-com:device:CurrentCostEnvirAppliancePulse:1",
+					"D_CurrentCostEnviRAppliancePulse1.xml", "", "", false)
+			end
 		end
 		if ((luup.variable_get(SERVICE_ID, "Appliance" .. tostring(child) .. "ThreePhase", lul_device) or "0") ~= "0") then
 			for phase = 1, 3 do
@@ -105,6 +116,7 @@ function initialize(lul_device)
 	-- the next time that the Luup engine is reloaded.
 	AUTO_DETECT = luup.variable_get(SERVICE_ID, "ApplianceAutoDetect", lul_device)
 	if (AUTO_DETECT == nil) then
+		AUTO_DETECT = "1"
 		luup.variable_set(SERVICE_ID, "ApplianceAutoDetect", "1", lul_device)
 	end
 
@@ -116,12 +128,24 @@ function initialize(lul_device)
 		for sensor = 0, 9 do
 			if (v.device_num_parent == lul_device and v.id == "Appliance" .. sensor) then
 				if (DEBUG) then luup.log("Child deviceId for Appliance " .. sensor .. " is " .. k) end
-				-- Set the device category. 21 is "power meter".
-				luup.attr_set("category_num", 21, k)
-				CHILD_DEVICE[tostring(sensor)] = k
-				TWOHOURLY_HISTORY[tostring(sensor)] = deserializeHistory(luup.variable_get(SERVICE_ID, "TwoHourlyHistory", k) or "")
-				DAILY_HISTORY[tostring(sensor)] = deserializeHistory(luup.variable_get(SERVICE_ID, "DailyHistory", k) or "")
-				MONTHLY_HISTORY[tostring(sensor)] = deserializeHistory(luup.variable_get(SERVICE_ID, "MonthlyHistory", k) or "")
+				-- What type of device is it?
+				local deviceType = luup.variable_get(SERVICE_ID, "Appliance" .. tostring(child) .. "Type", lul_device) or "1"
+				if (deviceType == "1") then
+					-- Electricity power (clamp, individual monitor).
+					-- Set the device category. 21 is "power meter".
+					luup.attr_set("category_num", 21, k)
+					CHILD_DEVICE[tostring(sensor)] = k
+					CHILD_DEVICE_TYPE[tostring(sensor)] = "1"
+					TWOHOURLY_HISTORY[tostring(sensor)] = deserializeHistory(luup.variable_get(SERVICE_ID, "TwoHourlyHistory", k) or "")
+					DAILY_HISTORY[tostring(sensor)] = deserializeHistory(luup.variable_get(SERVICE_ID, "DailyHistory", k) or "")
+					MONTHLY_HISTORY[tostring(sensor)] = deserializeHistory(luup.variable_get(SERVICE_ID, "MonthlyHistory", k) or "")
+				elseif (deviceType == "2") then
+					-- Impulse meter (OptiSmart).
+					-- Set the device category. 21 is "power meter".
+					luup.attr_set("category_num", 21, k)
+					CHILD_DEVICE[tostring(sensor)] = k
+					CHILD_DEVICE_TYPE[tostring(sensor)] = "2"
+				end
 			end
 			for phase = 1, 3 do
 				if (v.device_num_parent == lul_device and v.id == "Appliance" .. sensor .. "Phase" .. phase) then
@@ -358,22 +382,39 @@ function processMsgContext(context, lul_device)
 			end
 		end
 
-		-- Note this appliance number, if permitted.
-		if (AUTO_DETECT or "1" ~= "0") then
-			local previousId = luup.variable_get(SERVICE_ID, "Appliance" .. context.sensor, lul_device)
-			if (previousId == nil or context.id ~= previousId) then
-				luup.variable_set(SERVICE_ID, "Appliance" .. context.sensor, context.id, lul_device)
-				CHILD_DEVICE_COUNT = CHILD_DEVICE_COUNT + 1
-				-- Did we start with zero appliances?  Tell user we found another.
-				if (CHILD_DEVICE_DISCOVERY_HANDLE ~= nil) then
-					luup.task("Discovered " .. CHILD_DEVICE_COUNT .. (CHILD_DEVICE_COUNT == 1 and " appliance" or " appliances") .. ". Reload when all appliances are discovered", 1, string.format("%s[%d]", luup.devices[lul_device].description, lul_device), CHILD_DEVICE_DISCOVERY_HANDLE)
-				end
-			end
-		end
-
 		-- Compute parent device's reading, using its custom formula.
 		APPLIANCE_POWER[context.sensor] = context.watts
 		luup.variable_set(ENERGY_SERVICE_ID, "Watts", calculateFormula(APPLIANCE_POWER), lul_device)
+	elseif (context.packetType == "realtime" and context.type == "2") then
+		-- Impulse (OptiSmart) meter data.
+
+		-- Log the child device's impulse (if there is a child device).
+		local childDevice = CHILD_DEVICE[context.sensor]
+		if (childDevice ~= nil) then
+			luup.variable_set(ENERGY_SERVICE_ID, "Pulse", context.imp, childDevice)
+			local zero = luup.variable_get(SERVICE_ID, "PulseZero", childDevice) or "0"
+			luup.variable_set(SERVICE_ID, "ImpulsePerUnit", context.ipu, childDevice)
+			luup.variable_set(ENERGY_SERVICE_ID, "KWH", (tonumber(context.imp) - tonumber(zero))/tonumber(context.ipu), childDevice)
+			luup.variable_set(SERVICE_ID, "DaysSinceBirth", context.dsb, childDevice)
+			luup.variable_set(SERVICE_ID, "Time", context.time, childDevice)
+			luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, childDevice)
+			if (context.version) then luup.variable_set(SERVICE_ID, "Version", context.version, childDevice) end
+			if (context.uid) then luup.variable_set(SERVICE_ID, "UID", context.uid, childDevice) end
+		end
+	end
+
+	-- Note this appliance number, if permitted.
+	if (AUTO_DETECT ~= "0") then
+		local previousId = luup.variable_get(SERVICE_ID, "Appliance" .. context.sensor, lul_device)
+		if (previousId == nil or context.id ~= previousId) then
+			luup.variable_set(SERVICE_ID, "Appliance" .. context.sensor, context.id, lul_device)
+			luup.variable_set(SERVICE_ID, "Appliance" .. context.sensor .. "Type", context.type, lul_device)
+			CHILD_DEVICE_COUNT = CHILD_DEVICE_COUNT + 1
+			-- Did we start with zero appliances?  Tell user we found another.
+			if (CHILD_DEVICE_DISCOVERY_HANDLE ~= nil) then
+				luup.task("Discovered " .. CHILD_DEVICE_COUNT .. (CHILD_DEVICE_COUNT == 1 and " appliance" or " appliances") .. ". Reload when all appliances are discovered", 1, string.format("%s[%d]", luup.devices[lul_device].description, lul_device), CHILD_DEVICE_DISCOVERY_HANDLE)
+			end
+		end
 	end
 
 	if (context.tmpr) then
@@ -407,7 +448,8 @@ function updateHistory(lul_device)
 	-- Each child device.
 	for sensor = 0, 9 do
 		local childDevice = CHILD_DEVICE[tostring(sensor)]
-		if (childDevice ~= nil) then
+		local childDeviceType = CHILD_DEVICE_TYPE[tostring(sensor)]
+		if (childDevice ~= nil and childDeviceType == "1") then
 			luup.variable_set(SERVICE_ID, "TwoHourlyHistory", serializeHistory(TWOHOURLY_HISTORY[tostring(sensor)]), childDevice)
 			luup.variable_set(SERVICE_ID, "DailyHistory", serializeHistory(DAILY_HISTORY[tostring(sensor)]), childDevice)
 			luup.variable_set(SERVICE_ID, "MonthlyHistory", serializeHistory(MONTHLY_HISTORY[tostring(sensor)]), childDevice)

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+	<specVersion>
+		<major>1</major>
+		<minor>0</minor>
+	</specVersion>
+	<device>
+		<deviceType>urn:schemas-futzle-com:device:CurrentCostEnviRAppliancePulse:1</deviceType>
+		<staticJson>D_CurrentCostEnviRAppliancePulse1.json</staticJson>
+		<serviceList>
+			<service>
+				<serviceType>urn:schemas-futzle-com:service:CurrentCostEnviR:1</serviceType>
+				<serviceId>urn:futzle-com:serviceId:CurrentCostEnviR1</serviceId>
+				<SCPDURL>S_CurrentCostEnviR1.xml</SCPDURL>
+			</service>
+			<service>
+				<serviceType>urn:schemas-micasaverde-com:service:EnergyMetering:1</serviceType>
+				<serviceId>urn:micasaverde-com:serviceId:EnergyMetering1</serviceId>
+				<SCPDURL>S_EnergyMetering1.xml</SCPDURL>
+			</service>
+		</serviceList>
+	</device>
+</root>
+

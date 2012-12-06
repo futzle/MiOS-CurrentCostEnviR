@@ -1,0 +1,267 @@
+{
+	"flashicon": "icons\/Power_Meter.swf",
+	"imgIconBody": "",
+	"imgIconDimmable": "",
+	"imgIconTurnable": "",
+	"imgIconMin": "",
+	"imgIconMax": "",
+	"halloIconsDir": "pics\/hallo",
+	"inScene": "0",
+	"DisplayStatus": {
+	},
+	"doc_url": {
+		"doc_language": 1,
+		"doc_manual": 1,
+		"doc_version": 1,
+		"doc_platform": 0,
+		"doc_page": "devices"
+	},
+	"Tabs": [
+		{
+			"Label": {
+				"lang_tag": "tabname_control",
+				"text": "Control"
+			},
+			"Position": "0",
+			"TabType": "flash",
+			"SceneGroup": [
+				{
+					"id": "1",
+					"top": "1",
+					"left": "0",
+					"x": "2",
+					"y": "1"
+				}
+			],
+			"ControlGroup": [
+				{
+					"id": "1",
+					"type": "info",
+					"scenegroup": "1"
+				}
+			],
+			"Control": [
+				{
+					"ControlGroup": "1",
+					"ControlPair": "1",
+					"ControlHeader": "1",
+					"ControlType": "label",
+					"left": 0,
+					"Label": {
+						"lang_tag": "energy",
+						"text": "Energy:"
+					},
+					"Display": {
+						"Top": 60,
+						"Left": 50,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlGroup": "1",
+					"ControlPair": "1",
+					"ControlHeader": "1",
+					"ControlType": "variable",
+					"left": 0.5,
+					"Display": {
+						"Service": "urn:micasaverde-com:serviceId:EnergyMetering1",
+						"Variable": "KWH",
+						"Top": 60,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlGroup":"1",
+					"ControlPair": "1",
+					"ControlHeader": "1",
+					"ControlType": "label",
+					"left": 0.8,
+					"Label": {
+						"lang_tag": "kwh",
+						"text": "kWh"
+					},
+					"Display": {
+						"Top": 60,
+						"Left": 170,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlType": "label",
+					"Label": {
+						"lang_tag": "temperature",
+						"text": "Temperature:"
+					},
+					"Display": {
+						"Top": 90,
+						"Left": 50,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlType": "variable",
+					"Display": {
+						"Service": "urn:upnp-org:serviceId:TemperatureSensor1",
+						"Variable": "CurrentTemperature",
+						"Top": 90,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlType": "label",
+					"Label": {
+						"lang_tag": "dayssincebirth",
+						"text": "Days since birth:"
+					},
+					"Display": {
+						"Top": 120,
+						"Left": 50,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlType": "variable",
+					"Display": {
+						"Service": "urn:futzle-com:serviceId:CurrentCostEnviR1",
+						"Variable": "DaysSinceBirth",
+						"Top": 120,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlType": "label",
+					"Label": {
+						"lang_tag": "time",
+						"text": "Console time:"
+					},
+					"Display": {
+						"Top": 150,
+						"Left": 50,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlType": "variable",
+					"Display": {
+						"Service": "urn:futzle-com:serviceId:CurrentCostEnviR1",
+						"Variable": "Time",
+						"Top": 150,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlType": "label",
+					"Label": {
+						"lang_tag": "version",
+						"text": "Version:"
+					},
+					"Display": {
+						"Top": 180,
+						"Left": 50,
+						"Width": 75,
+						"Height": 20
+					}
+				},
+				{
+					"ControlType": "variable",
+					"Display": {
+						"Service": "urn:futzle-com:serviceId:CurrentCostEnviR1",
+						"Variable": "Version",
+						"Top": 180,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					}
+				}
+			]
+		},
+		{
+			"Label": {
+				"lang_tag": "advanced",
+				"text": "Advanced"
+			},
+			"Position": "1",
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "advanced_device"
+		}, 
+		{
+			"Label": {
+				"lang_tag": "logs",
+				"text": "Logs"
+			},
+			"Position": "2",
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "device_logs"
+		},
+		{
+			"Label": {
+				"lang_tag": "notifications",
+				"text": "Notifications"
+			},
+			"Position": "3",
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "device_notifications"
+		}
+	],
+	"eventList": {
+		"event_1": {
+			"label": "Energy consumption goes above",
+			"serviceId": "urn:micasaverde-com:serviceId:EnergyMetering1",
+			"norepeat": "1",
+			"argumentList" : {
+				"argument_1" : {
+					"dataType": "i4",
+					"name": "KWH",
+					"comparisson": ">",
+					"prefix": "kWh: ",
+					"suffix": ""
+				}
+			}
+		}
+	},
+	"eventList2": [
+		{
+			"id": 1,
+			"label": {
+				"lang_tag": "energy_consumption_goes_above",
+				"text": "Energy consumption goes above"
+			},
+			"serviceId": "urn:micasaverde-com:serviceId:EnergyMetering1",
+			"norepeat": "1",
+			"argumentList" : [
+				{
+					"id": 1,
+					"dataType": "i4",
+					"name": "KWH",
+					"comparisson": ">",
+					"prefix": {
+						"lang_tag": "kwh",
+						"text": "kWh: "
+					},
+					"suffix": {},
+					"HumanFriendlyText": {
+						"lang_tag": "hft_energy_consumption_goes_above",
+						"text": "_DEVICE_NAME_: Energy consumption goes above _ARGUMENT_VALUE_ kWh"
+					}
+				}
+			]
+		}
+	],
+	"DeviceType": "urn:schemas-futzle-com:device:CurrentCostEnviRAppliancePulse:1"
+}

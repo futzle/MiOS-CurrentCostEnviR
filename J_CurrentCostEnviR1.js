@@ -35,6 +35,8 @@ function setFormula(deviceId, a, operation)
    Provide GUI for editing global and per-appliance settings. */
 function setup(deviceId)
 {
+	var applianceTypes = [ "Unknown", "Electricity (Power)", "Electricity (Pulse)" ];
+
 	var htmlResult = "";
 	htmlResult += "<div>";
 	htmlResult += "<table border='0' padding='0' width='100%'>";
@@ -60,7 +62,7 @@ function setup(deviceId)
 	// Child device configuration.
 	htmlResult += "<table border='0' padding='0' width='100%'>";
 	htmlResult += "<tr>";
-	htmlResult += "<th>Appliance</th><th>ID</th><th>Name</th><th>Separate Phases</th><th>Main power</th>";
+	htmlResult += "<th>Appliance</th><th>Type</th><th>ID</th><th>Name</th><th>Separate Phases</th><th>Main power</th>";
 	htmlResult += "</tr>";
 
 	var formula = getFormula(deviceId);
@@ -69,27 +71,40 @@ function setup(deviceId)
 	{
 		var applianceId = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "Appliance" + a, 0);
 		if (applianceId == undefined || applianceId == "" || applianceId == "0") continue;
+		var applianceType = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "Appliance" + a + "Type", 0);
+		if (applianceType == undefined) { applianceType = 1; }
+		applianceType = applianceType - 0;
 		htmlResult += "<tr>";
 		// Appliance number
 		htmlResult += "<td>" + a + (a == 0 ? " (whole house)" : "") + "</td>";
+		// Appliance type
+		htmlResult += "<td>" + applianceTypes[applianceType] + "</td>";
 		// Appliance unique identifier
 		htmlResult += "<td>" + applianceId.escapeHTML() + "</td>";
 		// Appliance name as set by the user
 		var applianceName = getChildApplianceName(deviceId, a);
 		htmlResult += "<td>" + applianceName + "</td>";
-		// Create additional child devices for each phase?
-		var applianceThreePhase = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "Appliance" + a + "ThreePhase", 0);
-		if (applianceThreePhase == undefined) applianceThreePhase = 0;
-		htmlResult += "<td><input type='checkbox' id='appliance" + a + "ThreePhase' " + (applianceThreePhase == "1" ? "checked='checked' " : "") + "onclick='set_device_state(" + deviceId + ", \"urn:futzle-com:serviceId:CurrentCostEnviR1\", \"Appliance" + a + "ThreePhase\", $F(\"appliance" + a + "ThreePhase\") ? 1 : 0, 0)'/></td>";
-		// How does the child's energy contribute to the main device's energy (+ or -)?
-		htmlResult += "<td>"
-		htmlResult += "<select id='formula" + a + "' onchange='setFormula(" + deviceId + "," + a + ",$F(\"formula" + a + "\"))'>";
-		htmlResult += "<option value='none' " + (formula.indexOf("+" + a) == -1 && formula.indexOf("-" + a) == -1 ? "selected='selected' " : "") + ">None</option>";
-		htmlResult += "<option value='add' " + (formula.indexOf("+" + a) != -1 ? "selected='selected' " : "") + ">Add</option>";
-		htmlResult += "<option value='subtract' " + (formula.indexOf("-" + a) != -1 ? "selected='selected' " : "") + ">Subtract</option>";
-		htmlResult += "</select>";
-		htmlResult += "</td>";
-		htmlResult += "</tr>";
+		if (applianceType == 1)
+		{
+			// Create additional child devices for each phase?
+			var applianceThreePhase = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "Appliance" + a + "ThreePhase", 0);
+			if (applianceThreePhase == undefined) applianceThreePhase = 0;
+			htmlResult += "<td><input type='checkbox' id='appliance" + a + "ThreePhase' " + (applianceThreePhase == "1" ? "checked='checked' " : "") + "onclick='set_device_state(" + deviceId + ", \"urn:futzle-com:serviceId:CurrentCostEnviR1\", \"Appliance" + a + "ThreePhase\", $F(\"appliance" + a + "ThreePhase\") ? 1 : 0, 0)'/></td>";
+			// How does the child's energy contribute to the main device's energy (+ or -)?
+			htmlResult += "<td>"
+			htmlResult += "<select id='formula" + a + "' onchange='setFormula(" + deviceId + "," + a + ",$F(\"formula" + a + "\"))'>";
+			htmlResult += "<option value='none' " + (formula.indexOf("+" + a) == -1 && formula.indexOf("-" + a) == -1 ? "selected='selected' " : "") + ">None</option>";
+			htmlResult += "<option value='add' " + (formula.indexOf("+" + a) != -1 ? "selected='selected' " : "") + ">Add</option>";
+			htmlResult += "<option value='subtract' " + (formula.indexOf("-" + a) != -1 ? "selected='selected' " : "") + ">Subtract</option>";
+			htmlResult += "</select>";
+			htmlResult += "</td>";
+			htmlResult += "</tr>";
+		}
+		else
+		{
+			// No phase or arithmetic for pulse meters.
+			htmlResult += "<td /><td />";
+		}	
 	}
 
 	htmlResult += "</table>";
