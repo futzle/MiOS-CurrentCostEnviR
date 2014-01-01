@@ -206,6 +206,13 @@ function deserializeHistory(s)
 	return result
 end	
 
+-- Set a variable only if it is different.
+function set_if_different(serviceId, variable, value, deviceId)
+	if (luup.variable_get(serviceId, variable, deviceId) ~= tostring(value)) then
+		luup.variable_set(serviceId, variable, value, deviceId)
+	end
+end
+
 -- 
 -- Process elements in the <msg> part of a packet.
 -- 
@@ -213,28 +220,28 @@ end
 -- <src> contains version of the CurrentCost protocol.
 function processMsgSrc(context, lul_device, source)
 	context.version = source
-	luup.variable_set(SERVICE_ID, "Version", source, lul_device)
+	set_if_different(SERVICE_ID, "Version", source, lul_device)
 	return context
 end
 
 -- <uid> contains a pseudo-unique string for this EnviR.
 function processMsgUid(context, lul_device, uid)
 	context.uid = uid
-	luup.variable_set(SERVICE_ID, "UID", uid, lul_device)
+	set_if_different(SERVICE_ID, "UID", uid, lul_device)
 	return context
 end
 
 -- <dsb> ("Days Since Birth") is the nearest thing the EnviR has of a date.
 function processMsgDsb(context, lul_device, dsb)
 	context.dsb = dsb
-	luup.variable_set(SERVICE_ID, "DaysSinceBirth", tonumber(dsb), lul_device)
+	set_if_different(SERVICE_ID, "DaysSinceBirth", tonumber(dsb), lul_device)
 	return context
 end
 
 -- <time> is the EnviR console's time of day.
 function processMsgTime(context, lul_device, time)
 	context.time = time
-	luup.variable_set(SERVICE_ID, "Time", time, lul_device)
+	set_if_different(SERVICE_ID, "Time", time, lul_device)
 	return context
 end
 
@@ -361,45 +368,45 @@ function processMsgContext(context, lul_device)
 		-- Log the child device's power (if there is a child device).
 		local childDevice = CHILD_DEVICE[context.sensor]
 		if (childDevice ~= nil) then
-			luup.variable_set(ENERGY_SERVICE_ID, "Watts", context.watts, childDevice)
-			luup.variable_set(SERVICE_ID, "DaysSinceBirth", context.dsb, childDevice)
-			luup.variable_set(SERVICE_ID, "Time", context.time, childDevice)
-			luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, childDevice)
-			if (context.version) then luup.variable_set(SERVICE_ID, "Version", context.version, childDevice) end
-			if (context.uid) then luup.variable_set(SERVICE_ID, "UID", context.uid, childDevice) end
+			set_if_different(ENERGY_SERVICE_ID, "Watts", context.watts, childDevice)
+			set_if_different(SERVICE_ID, "DaysSinceBirth", context.dsb, childDevice)
+			set_if_different(SERVICE_ID, "Time", context.time, childDevice)
+			set_if_different(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, childDevice)
+			if (context.version) then set_if_different(SERVICE_ID, "Version", context.version, childDevice) end
+			if (context.uid) then set_if_different(SERVICE_ID, "UID", context.uid, childDevice) end
 		end
 
 		-- Log three-phase power to separate devices, if asked.
 		for phase = 1, 3 do
 			local childDevicePhase = CHILD_DEVICE_THREEPHASE[context.sensor][tostring(phase)]
 			if (childDevicePhase ~= nil) then
-				luup.variable_set(ENERGY_SERVICE_ID, "Watts", context.phase[tostring(phase)], childDevicePhase)
-				luup.variable_set(SERVICE_ID, "DaysSinceBirth", context.dsb, childDevicePhase)
-				luup.variable_set(SERVICE_ID, "Time", context.time, childDevicePhase)
-				luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, childDevicePhase)
-				if (context.version) then luup.variable_set(SERVICE_ID, "Version", context.version, childDevicePhase) end
-				if (context.uid) then luup.variable_set(SERVICE_ID, "UID", context.uid, childDevicePhase) end
+				set_if_different(ENERGY_SERVICE_ID, "Watts", context.phase[tostring(phase)], childDevicePhase)
+				set_if_different(SERVICE_ID, "DaysSinceBirth", context.dsb, childDevicePhase)
+				set_if_different(SERVICE_ID, "Time", context.time, childDevicePhase)
+				set_if_different(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, childDevicePhase)
+				if (context.version) then set_if_different(SERVICE_ID, "Version", context.version, childDevicePhase) end
+				if (context.uid) then set_if_different(SERVICE_ID, "UID", context.uid, childDevicePhase) end
 			end
 		end
 
 		-- Compute parent device's reading, using its custom formula.
 		APPLIANCE_POWER[context.sensor] = context.watts
-		luup.variable_set(ENERGY_SERVICE_ID, "Watts", calculateFormula(APPLIANCE_POWER), lul_device)
+		set_if_different(ENERGY_SERVICE_ID, "Watts", calculateFormula(APPLIANCE_POWER), lul_device)
 	elseif (context.packetType == "realtime" and context.type == "2") then
 		-- Impulse (OptiSmart) meter data.
 
 		-- Log the child device's impulse (if there is a child device).
 		local childDevice = CHILD_DEVICE[context.sensor]
 		if (childDevice ~= nil) then
-			luup.variable_set(ENERGY_SERVICE_ID, "Pulse", context.imp, childDevice)
+			set_if_different(ENERGY_SERVICE_ID, "Pulse", context.imp, childDevice)
 			local zero = luup.variable_get(SERVICE_ID, "PulseZero", childDevice) or "0"
-			luup.variable_set(SERVICE_ID, "ImpulsePerUnit", context.ipu, childDevice)
-			luup.variable_set(ENERGY_SERVICE_ID, "KWH", (tonumber(context.imp) - tonumber(zero))/tonumber(context.ipu), childDevice)
-			luup.variable_set(SERVICE_ID, "DaysSinceBirth", context.dsb, childDevice)
-			luup.variable_set(SERVICE_ID, "Time", context.time, childDevice)
-			luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, childDevice)
-			if (context.version) then luup.variable_set(SERVICE_ID, "Version", context.version, childDevice) end
-			if (context.uid) then luup.variable_set(SERVICE_ID, "UID", context.uid, childDevice) end
+			set_if_different(SERVICE_ID, "ImpulsePerUnit", context.ipu, childDevice)
+			set_if_different(ENERGY_SERVICE_ID, "KWH", (tonumber(context.imp) - tonumber(zero))/tonumber(context.ipu), childDevice)
+			set_if_different(SERVICE_ID, "DaysSinceBirth", context.dsb, childDevice)
+			set_if_different(SERVICE_ID, "Time", context.time, childDevice)
+			set_if_different(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, childDevice)
+			if (context.version) then set_if_different(SERVICE_ID, "Version", context.version, childDevice) end
+			if (context.uid) then set_if_different(SERVICE_ID, "UID", context.uid, childDevice) end
 		end
 	end
 
@@ -407,8 +414,8 @@ function processMsgContext(context, lul_device)
 	if (AUTO_DETECT ~= "0") then
 		local previousId = luup.variable_get(SERVICE_ID, "Appliance" .. context.sensor, lul_device)
 		if (previousId == nil or context.id ~= previousId) then
-			luup.variable_set(SERVICE_ID, "Appliance" .. context.sensor, context.id, lul_device)
-			luup.variable_set(SERVICE_ID, "Appliance" .. context.sensor .. "Type", context.type, lul_device)
+			set_if_different(SERVICE_ID, "Appliance" .. context.sensor, context.id, lul_device)
+			set_if_different(SERVICE_ID, "Appliance" .. context.sensor .. "Type", context.type, lul_device)
 			CHILD_DEVICE_COUNT = CHILD_DEVICE_COUNT + 1
 			-- Did we start with zero appliances?  Tell user we found another.
 			if (CHILD_DEVICE_DISCOVERY_HANDLE ~= nil) then
@@ -418,10 +425,10 @@ function processMsgContext(context, lul_device)
 	end
 
 	if (context.tmpr) then
-		luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, lul_device)
+		set_if_different(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, lul_device)
 		-- Set temperature on the child temperature device (if there is one).
 		if (CHILD_TEMPERATURE_DEVICE) then
-			luup.variable_set(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, CHILD_TEMPERATURE_DEVICE)
+			set_if_different(TEMPERATURE_SERVICE_ID, "CurrentTemperature", context.tmpr, CHILD_TEMPERATURE_DEVICE)
 		end
 	end
 end
