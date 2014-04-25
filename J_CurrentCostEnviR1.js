@@ -1,7 +1,7 @@
 /* Get the name of the child device for a given appliance. */
 function getChildApplianceName(deviceId, a)
 {
-	var matches = jsonp.ud.devices.findAll(function(d) {
+	var matches = jQuery.grep(jsonp.ud.devices, function(d) {
 		return d.altid == "Appliance" + a && d.id_parent == deviceId
 	} );
 	if (matches.length > 0) { return matches[0].name; }
@@ -31,6 +31,21 @@ function setFormula(deviceId, a, operation)
 	set_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "Formula", formula, 0);
 }
 
+var entityMap = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': '&quot;',
+  "'": '&#39;',
+  "/": '&#x2F;'
+};
+
+function escapeHtml(string) {
+  return String(string).replace(/[&<>"'\/]/g, function (s) {
+    return entityMap[s];
+  });
+}
+
 /* Entry point for "Configuration" tab.
    Provide GUI for editing global and per-appliance settings. */
 function setup(deviceId)
@@ -46,7 +61,7 @@ function setup(deviceId)
 	htmlResult += "<td>Create a child device with console temperature</td>";
 	var childTemperature = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "ChildTemperature", 0);
 	if (childTemperature == undefined) childTemperature = 0;
-	htmlResult += "<td><input type='checkbox' id='childTemperature' " + (childTemperature == "1" ? "checked='checked' " : "") + "onclick='set_device_state(" + deviceId + ", \"urn:futzle-com:serviceId:CurrentCostEnviR1\", \"ChildTemperature\", $F(\"childTemperature\") ? 1 : 0, 0)'/></td>";
+	htmlResult += "<td><input type='checkbox' id='childTemperature' " + (childTemperature == "1" ?  "checked='checked' " : "") + "onclick='set_device_state(" + deviceId + ", \"urn:futzle-com:serviceId:CurrentCostEnviR1\", \"ChildTemperature\", jQuery(this).is(\":checked\") ? 1 : 0, 0)'/></td>";
 
 	htmlResult += "</tr><tr>";
 
@@ -54,7 +69,7 @@ function setup(deviceId)
 	htmlResult += "<td>Automatically create child devices for appliances</td>";
 	var applianceDetect = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "ApplianceAutoDetect", 0);
 	if (applianceDetect == undefined) applianceDetect = 1;
-	htmlResult += "<td><input type='checkbox' id='applianceDetect' " + (applianceDetect == "1" ? "checked='checked' " : "") + "onclick='set_device_state(" + deviceId + ", \"urn:futzle-com:serviceId:CurrentCostEnviR1\", \"ApplianceAutoDetect\", $F(\"applianceDetect\") ? 1 : 0, 0)'/></td>";
+	htmlResult += "<td><input type='checkbox' id='applianceDetect' " + (applianceDetect == "1" ? "checked='checked' " : "") + "onclick='set_device_state(" + deviceId + ", \"urn:futzle-com:serviceId:CurrentCostEnviR1\", \"ApplianceAutoDetect\", jQuery(this).is(\":checked\") ? 1 : 0, 0)'/></td>";
 
 	htmlResult += "</tr>";
 	htmlResult += "</table>";
@@ -80,7 +95,7 @@ function setup(deviceId)
 		// Appliance type
 		htmlResult += "<td>" + applianceTypes[applianceType] + "</td>";
 		// Appliance unique identifier
-		htmlResult += "<td>" + applianceId.escapeHTML() + "</td>";
+		htmlResult += "<td>" + escapeHtml(applianceId) + "</td>";
 		// Appliance name as set by the user
 		var applianceName = getChildApplianceName(deviceId, a);
 		htmlResult += "<td>" + applianceName + "</td>";
@@ -89,10 +104,10 @@ function setup(deviceId)
 			// Create additional child devices for each phase?
 			var applianceThreePhase = get_device_state(deviceId, "urn:futzle-com:serviceId:CurrentCostEnviR1", "Appliance" + a + "ThreePhase", 0);
 			if (applianceThreePhase == undefined) applianceThreePhase = 0;
-			htmlResult += "<td><input type='checkbox' id='appliance" + a + "ThreePhase' " + (applianceThreePhase == "1" ? "checked='checked' " : "") + "onclick='set_device_state(" + deviceId + ", \"urn:futzle-com:serviceId:CurrentCostEnviR1\", \"Appliance" + a + "ThreePhase\", $F(\"appliance" + a + "ThreePhase\") ? 1 : 0, 0)'/></td>";
+			htmlResult += "<td><input type='checkbox' id='appliance" + a + "ThreePhase' " + (applianceThreePhase == "1" ? "checked='checked' " : "") + "onclick='set_device_state(" + deviceId + ", \"urn:futzle-com:serviceId:CurrentCostEnviR1\", \"Appliance" + a + "ThreePhase\", jQuery(\"#appliance" + a + "ThreePhase\").is(\":checked\") ? 1 : 0, 0)'/></td>";
 			// How does the child's energy contribute to the main device's energy (+ or -)?
 			htmlResult += "<td>"
-			htmlResult += "<select id='formula" + a + "' onchange='setFormula(" + deviceId + "," + a + ",$F(\"formula" + a + "\"))'>";
+			htmlResult += "<select id='formula" + a + "' onchange='setFormula(" + deviceId + "," + a + ", jQuery(\"#formula" + a + "\").val())'>";
 			htmlResult += "<option value='none' " + (formula.indexOf("+" + a) == -1 && formula.indexOf("-" + a) == -1 ? "selected='selected' " : "") + ">None</option>";
 			htmlResult += "<option value='add' " + (formula.indexOf("+" + a) != -1 ? "selected='selected' " : "") + ">Add</option>";
 			htmlResult += "<option value='subtract' " + (formula.indexOf("-" + a) != -1 ? "selected='selected' " : "") + ">Subtract</option>";
