@@ -65,19 +65,19 @@ function initialize(lul_device)
 			if (deviceType == "1") then
 				-- Electricity power (clamp, individual monitor).
 				luup.chdev.append(lul_device, childDevices, "Appliance" .. tostring(child),
-					"Appliance " .. child, "urn:schemas-futzle-com:device:CurrentCostEnvirAppliance:1",
+					"Appliance " .. child, "urn:schemas-futzle-com:device:CurrentCostEnviRAppliance:1",
 					"D_CurrentCostEnviRAppliance1.xml", "", "", false)
 			elseif (deviceType == "2") then
 				-- Impulse meter (OptiSmart).
 				luup.chdev.append(lul_device, childDevices, "Appliance" .. tostring(child),
-					"Appliance " .. child .. " (pulse)", "urn:schemas-futzle-com:device:CurrentCostEnvirAppliancePulse:1",
+					"Appliance " .. child .. " (pulse)", "urn:schemas-futzle-com:device:CurrentCostEnviRAppliancePulse:1",
 					"D_CurrentCostEnviRAppliancePulse1.xml", "", "", false)
 			end
 		end
 		if ((luup.variable_get(SERVICE_ID, "Appliance" .. tostring(child) .. "ThreePhase", lul_device) or "0") ~= "0") then
 			for phase = 1, 3 do
 				luup.chdev.append(lul_device, childDevices, "Appliance" .. tostring(child) .. "Phase" .. tostring(phase),
-					"Appliance " .. child .. " phase " .. phase, "urn:schemas-futzle-com:device:CurrentCostEnvirAppliancePhase:1",
+					"Appliance " .. child .. " phase " .. phase, "urn:schemas-futzle-com:device:CurrentCostEnviRAppliancePhase:1",
 					"D_CurrentCostEnviRAppliancePhase1.xml", "", "", false)
 			end
 		end
