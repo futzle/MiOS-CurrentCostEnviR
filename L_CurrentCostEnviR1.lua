@@ -29,6 +29,8 @@ CHILD_DEVICE_DISCOVERY_HANDLE = nil
 -- Run once at Luup engine startup.
 function initialize(lul_device)
 	luup.log("Initializing CurrentCost EnviR")
+	-- Docs say this function takes an int, but apparently boolean works better.
+	luup.set_failure(false)
 
 	-- Run from serial device (including IPSerial) or open a socket? 
 	local ioDevice = luup.variable_get("urn:micasaverde-com:serviceId:HaDevice1", "IODevice", lul_device)
